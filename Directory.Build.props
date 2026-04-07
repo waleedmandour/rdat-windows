@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>2.0.0</Version>
+    <Authors>Dr. Waleed Mandour</Authors>
+    <Company>Sultan Qaboos University</Company>
+    <Copyright>© 2025 Dr. Waleed Mandour</Copyright>
+  </PropertyGroup>
+</Project>

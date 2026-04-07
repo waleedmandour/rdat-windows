@@ -1,0 +1,146 @@
+<Page
+    x:Class="RDAT.Copilot.Desktop.Views.WorkspacePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:RDAT.Copilot.Desktop.Views"
+    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls">
+
+    <Grid Background="{StaticResource RDATBgPrimaryBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="36"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Tab Bar -->
+        <Grid Grid.Row="0" Padding="8,0" Background="{StaticResource RDATTabsBgBrush}"
+              BorderBrush="{StaticResource RDATBorderBrush}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+                <!-- Editor Tab -->
+                <Border Background="{StaticResource RDATBgPrimaryBrush}"
+                        BorderBrush="{StaticResource RDATBorderBrush}" BorderThickness="0,2,1,0"
+                        Padding="12,6" CornerRadius="0">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE8A5;" FontSize="12" Foreground="{StaticResource RDATTealBrush}"/>
+                        <TextBlock Text="Translation Workspace" FontSize="12"
+                                  Foreground="{StaticResource RDATTextBrush}"/>
+                        <Ellipse Width="6" Height="6" Fill="{StaticResource RDATTealBrush}"
+                                VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Settings Tab -->
+                <Border Padding="12,6" CornerRadius="0">
+                    <Button Background="Transparent" BorderThickness="0"
+                            Padding="0" Click="SettingsTab_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE713;" FontSize="12"
+                                     Foreground="{StaticResource RDATTextMutedBrush}"/>
+                            <TextBlock Text="Settings" FontSize="12"
+                                      Foreground="{StaticResource RDATTextMutedBrush}"/>
+                        </StackPanel>
+                    </Button>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Split-Pane Editor Area -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="38*" MinWidth="200"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="62*" MinWidth="300"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- SOURCE Pane -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="28"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Source Pane Header -->
+                <Border Grid.Row="0" Padding="12,0" Background="{StaticResource RDATTabsBgBrush}"
+                       BorderBrush="{StaticResource RDATBorderBrush}" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Ellipse Width="6" Height="6" Fill="#f59e0b" Opacity="0.7"/>
+                            <TextBlock Text="SOURCE" FontSize="11"
+                                      Foreground="{StaticResource RDATTextMutedBrush}"
+                                      FontWeight="SemiBold"/>
+                            <Border Background="{StaticResource RDATBgTertiaryBrush}"
+                                   BorderBrush="{StaticResource RDATBorderBrush}"
+                                   Padding="6,2" CornerRadius="3">
+                                <TextBlock Text="English" FontSize="10"
+                                         Foreground="{StaticResource RDATTextMutedBrush}"/>
+                            </Border>
+                        </StackPanel>
+
+                        <Button Grid.Column="2" Content="✎" FontSize="11"
+                               Background="Transparent" BorderThickness="0"
+                               Padding="4" Click="EditSource_Click"
+                               ToolTipService.ToolTip="Edit source text">
+                            <Button.Foreground>
+                                <SolidColorBrush Color="{StaticResource RDATTextDim}"/>
+                            </Button.Foreground>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Source WebView2 (Monaco) -->
+                <Grid Grid.Row="1">
+                    <WebView2 x:Name="SourceWebView"
+                             Source="ms-appx:///Assets/Monaco/editor-source.html"
+                             DefaultBackgroundColor="#1e1e2e"/>
+                </Grid>
+            </Grid>
+
+            <!-- Resize Handle -->
+            <controls:GridSplitter Grid.Column="1"
+                                   Width="6" HorizontalAlignment="Center"
+                                   Background="Transparent"
+                                   ResizeDirection="Columns"
+                                   CursorBehavior="ChangeOnSplitterHover">
+                <controls:GridSplitter.RenderTransform>
+                    <TranslateTransform X="-3"/>
+                </controls:GridSplitter.RenderTransform>
+            </controls:GridSplitter>
+
+            <!-- TARGET Pane -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="28"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Target Pane Header -->
+                <Border Grid.Row="0" Padding="12,0" Background="{StaticResource RDATTabsBgBrush}"
+                       BorderBrush="{StaticResource RDATBorderBrush}" BorderThickness="0,0,0,1">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Ellipse Width="6" Height="6" Fill="{StaticResource RDATTealBrush}"/>
+                        <TextBlock Text="TARGET" FontSize="11"
+                                  Foreground="{StaticResource RDATTextBrush}"
+                                  FontWeight="SemiBold"/>
+                        <Border Background="#0d948820" BorderBrush="#14b8a630"
+                               Padding="6,2" CornerRadius="3">
+                            <TextBlock Text="Arabic" FontSize="10"
+                                     Foreground="#5eead4"/>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Target WebView2 (Monaco) -->
+                <Grid Grid.Row="1">
+                    <WebView2 x:Name="TargetWebView"
+                             Source="ms-appx:///Assets/Monaco/editor-target.html"
+                             DefaultBackgroundColor="#1e1e2e"/>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

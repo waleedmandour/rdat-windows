@@ -1,0 +1,40 @@
+<Application
+    x:Class="RDAT.Copilot.Desktop.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:RDAT.Copilot.Desktop">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- RDAT Color Palette (VS Code Dark-inspired) -->
+            <Color x:Key="RDATTealPrimary">#2dd4bf</Color>
+            <Color x:Key="RDATTealSecondary">#14b8a6</Color>
+            <Color x:Key="RDATBgPrimary">#1e1e2e</Color>
+            <Color x:Key="RDATBgSecondary">#252536</Color>
+            <Color x:Key="RDATBgTertiary">#2a2a3d</Color>
+            <Color x:Key="RDATBorder">#333346</Color>
+            <Color x:Key="RDATText">#e0e0f0</Color>
+            <Color x:Key="RDATTextMuted">#8888a8</Color>
+            <Color x:Key="RDATTextDim">#555570</Color>
+            <Color x:Key="RDATStatusBar">#1a1a2e</Color>
+            <Color x:Key="RDATTabBg">#1a1a2e</Color>
+
+            <SolidColorBrush x:Key="RDATTealBrush" Color="{StaticResource RDATTealPrimary}" />
+            <SolidColorBrush x:Key="RDATTealSecondaryBrush" Color="{StaticResource RDATTealSecondary}" />
+            <SolidColorBrush x:Key="RDATBgPrimaryBrush" Color="{StaticResource RDATBgPrimary}" />
+            <SolidColorBrush x:Key="RDATBgSecondaryBrush" Color="{StaticResource RDATBgSecondary}" />
+            <SolidColorBrush x:Key="RDATBorderBrush" Color="{StaticResource RDATBorder}" />
+            <SolidColorBrush x:Key="RDATTextBrush" Color="{StaticResource RDATText}" />
+            <SolidColorBrush x:Key="RDATTextMutedBrush" Color="{StaticResource RDATTextMuted}" />
+            <SolidColorBrush x:Key="RDATStatusBarBrush" Color="{StaticResource RDATStatusBar}" />
+            <SolidColorBrush x:Key="RDATTabsBgBrush" Color="{StaticResource RDATTabBg}" />
+
+            <!-- Font -->
+            <FontFamily x:Key="RDATFontFamily">Segoe UI Variable</FontFamily>
+            <FontFamily x:Key="RDATMonoFont">Cascadia Code, Consolas, monospace</FontFamily>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

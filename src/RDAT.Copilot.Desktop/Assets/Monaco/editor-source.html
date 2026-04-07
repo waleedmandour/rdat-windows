@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RDAT Copilot — Source Editor</title>
+
+  <!-- Monaco Editor from CDN (or local for offline) -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.0/min/vs/loader.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #editor-container { width: 100%; height: 100%; overflow: hidden; background: #1e1e2e; }
+
+    /* Source highlight line */
+    .rdat-source-highlight {
+      background: rgba(45, 212, 191, 0.08) !important;
+    }
+
+    /* Custom scrollbar */
+    .monaco-scrollable-element > .scrollbar > .slider {
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-radius: 4px !important;
+    }
+    .monaco-scrollable-element > .scrollbar > .slider:hover {
+      background: rgba(255, 255, 255, 0.2) !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="editor-container"></div>
+
+  <script src="ms-appx:///Assets/Monaco/monaco-bridge.js"></script>
+
+  <script>
+    // Load Monaco Editor AMD loader
+    require.config({
+      paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.55.0/min/vs" }
+    });
+
+    require(["vs/editor/editor.main"], function (monacoInstance) {
+      monaco = monacoInstance;
+
+      // Define RDAT custom theme (VS Code Dark inspired)
+      monaco.editor.defineTheme("rdat-dark", {
+        base: "vs-dark",
+        inherit: true,
+        rules: [
+          { token: "comment", foreground: "555570", fontStyle: "italic" },
+          { token: "keyword", foreground: "2dd4bf" },
+          { token: "string", foreground: "a5d6a7" },
+          { token: "number", foreground: "f59e0b" },
+        ],
+        colors: {
+          "editor.background": "#1e1e2e",
+          "editor.foreground": "#e0e0f0",
+          "editor.lineHighlightBackground": "#ffffff0a",
+          "editorCursor.foreground": "#2dd4bf",
+          "editor.selectionBackground": "#2dd4bf30",
+          "editorLineNumber.foreground": "#555570",
+          "editorLineNumber.activeForeground": "#8888a8",
+          "editorIndentGuide.background": "#333346",
+          "editorIndentGuide.activeBackground": "#444460",
+          "editor.selectionHighlightBackground": "#2dd4bf15",
+          "editorBracketMatch.background": "#2dd4bf20",
+          "editorBracketMatch.border": "#2dd4bf40",
+        }
+      });
+
+      // Register the rdat-source language (plain text with custom theme)
+      monaco.languages.register({ id: "rdat-source" });
+
+      // Initialize the bridge
+      window.initRDATBridge({
+        paneId: "source",
+        readOnly: true,
+        languageId: "rdat-source",
+        initialText: ""
+      });
+
+      console.log("[RDAT-Source] Monaco editor loaded successfully");
+    });
+  </script>
+</body>
+</html>
