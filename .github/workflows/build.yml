@@ -45,7 +45,7 @@ jobs:
       - name: Run Core tests
         run: dotnet test tests/RDAT.Copilot.Core.Tests/RDAT.Copilot.Core.Tests.csproj ^
             --configuration ${{ env.CONFIGURATION }} ^
-            --no-build ^
+            --no-restore ^
             --verbosity normal ^
             -p:Platform=${{ matrix.platform }}
 
