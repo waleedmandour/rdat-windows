@@ -67,9 +67,9 @@ public partial class App : Application
         services.AddSingleton<NavigationService>();
 
         // ─── ViewModels ─────────────────────────────────────────────
-        services.AddTransient<WorkspaceViewModel>();
-        services.AddTransient<SourceEditorViewModel>();
-        services.AddTransient<TargetEditorViewModel>();
+        services.AddSingleton<WorkspaceViewModel>();
+        services.AddSingleton<SourceEditorViewModel>();
+        services.AddSingleton<TargetEditorViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<TmPanelViewModel>();
 
@@ -80,6 +80,26 @@ public partial class App : Application
     {
         _mainWindow = new MainWindow();
         _mainWindow.Activate();
+        _mainWindow.Closed += async (s, e) =>
+        {
+            // Gracefully shutdown services
+            try
+            {
+                var queue = Services.GetService<ILlmQueueService>();
+                if (queue is not null) await queue.StopAsync();
+
+                var coordinator = Services.GetService<IGhostTextCoordinator>();
+                if (coordinator is not null) await coordinator.StopAsync();
+
+                var rag = Services.GetService<IRagPipelineService>();
+                if (rag is not null) await rag.ShutdownAsync();
+            }
+            catch (Exception ex)
+            {
+                Services.GetRequiredService<ILogger<App>>()
+                    .LogDebug(ex, "[RDAT] Error during service shutdown");
+            }
+        };
     }
 
     private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
@@ -89,10 +109,6 @@ public partial class App : Application
         logger.LogError(e.Exception, "Unhandled exception: {Message}", e.Exception.Message);
 
         // Prevent the exception from crashing the app during development
-#if DEBUG
         e.Handled = true;
-#else
-        e.Handled = true;
-#endif
     }
 }

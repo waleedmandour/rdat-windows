@@ -31,10 +31,11 @@ namespace RDAT.Copilot.Core.Services;
 ///   The system prompt instructs the LLM to output a JSON array of issues
 ///   with exact position markers that can be mapped back to the text.
 /// </summary>
-public sealed class GrammarCheckerService : IGrammarCheckerService
+public sealed class GrammarCheckerService : IGrammarCheckerService, IDisposable
 {
     private readonly ILocalInferenceService _inferenceService;
     private readonly ILogger<GrammarCheckerService> _logger;
+    private readonly SemaphoreSlim _inferenceLock = new(1, 1);
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -87,12 +88,21 @@ public sealed class GrammarCheckerService : IGrammarCheckerService
                 "[Grammar] Running check: {Lang}, {Chars} chars",
                 languageDirection, text.Length);
 
-            var rawResponse = await _inferenceService.GenerateAsync(
-                systemPrompt,
-                userMessage,
-                AppConstants.GrammarCheckMaxTokens,
-                0.15f, // Low temperature for deterministic grammar analysis
-                cancellationToken).ConfigureAwait(true);
+            string rawResponse;
+            await _inferenceLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                rawResponse = await _inferenceService.GenerateAsync(
+                    systemPrompt,
+                    userMessage,
+                    AppConstants.GrammarCheckMaxTokens,
+                    0.15f, // Low temperature for deterministic grammar analysis
+                    cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _inferenceLock.Release();
+            }
 
             if (string.IsNullOrWhiteSpace(rawResponse))
             {
@@ -369,5 +379,10 @@ public sealed class GrammarCheckerService : IGrammarCheckerService
 
         // Final fallback: use the hint line
         return (hintLine, hintLine, 1, Math.Max(1, normalizedFragment.Length + 1));
+    }
+
+    public void Dispose()
+    {
+        _inferenceLock.Dispose();
     }
 }

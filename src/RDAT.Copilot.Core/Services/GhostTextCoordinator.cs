@@ -433,10 +433,18 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
         return lines[lineNumber - 1];
     }
 
+    private string GetSourceLine(int lineNumber)
+    {
+        if (string.IsNullOrEmpty(_currentSourceText)) return string.Empty;
+        var lines = _currentSourceText.Split('\n');
+        if (lineNumber < 1 || lineNumber > lines.Length) return string.Empty;
+        return lines[lineNumber - 1];
+    }
+
     private string GetSourceSentenceForLine(int targetLine)
     {
         // Map target line to source line (1:1 for sentence-level alignment)
-        return GetTargetLine(targetLine); // Source text is aligned by line
+        return GetSourceLine(targetLine);
     }
 
     private void CancelBurstTimer()

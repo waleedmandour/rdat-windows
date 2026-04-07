@@ -69,7 +69,7 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
 
         await Task.Run(() =>
         {
-            var sessionOptions = new SessionOptions();
+            using var sessionOptions = new SessionOptions();
 
             // Use CPU by default. DirectML can be added for GPU/NPU:
             // sessionOptions.AppendExecutionProvider_Dml(0);
@@ -270,13 +270,15 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
                 for (int i = 0; i < word.Length && tokenIds.Count < maxTokens; i += chunkSize)
                 {
                     var chunk = word[Math.Min(i, word.Length - 1)..Math.Min(i + chunkSize, word.Length)];
-                    tokenIds.Add((uint)chunk.GetHashCode() % 30000 + 1000);
+                    var chunkHash = chunk.GetHashCode();
+                    tokenIds.Add((uint)(chunkHash == int.MinValue ? 0 : Math.Abs(chunkHash)) % 30000 + 1000);
                 }
             }
             else
             {
                 // Simple word-level token hash
-                tokenIds.Add((uint)Math.Abs(word.GetHashCode()) % 30000 + 1000);
+                var hash = word.GetHashCode();
+                tokenIds.Add((uint)(hash == int.MinValue ? 0 : Math.Abs(hash)) % 30000 + 1000);
             }
         }
 

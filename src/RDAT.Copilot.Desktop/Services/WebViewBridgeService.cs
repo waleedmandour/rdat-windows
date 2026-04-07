@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml.Controls;
 using RDAT.Copilot.Desktop.Helpers;
-using RDAT.Copilot.Desktop.ViewModels;
 
 namespace RDAT.Copilot.Desktop.Services;
 
@@ -33,7 +32,7 @@ namespace RDAT.Copilot.Desktop.Services;
 ///   - clearGrammarMarkers: {}             (Phase 4: Clear grammar markers)
 ///   - applyQuickFix: { line, startCol, endCol, newText } (Phase 4: Quick fix)
 /// </summary>
-public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
+public class WebViewBridgeService : IWebViewBridge
 {
     private readonly ILogger<WebViewBridgeService> _logger;
     private readonly Dictionary<string, WebView2> _webViews = new();
@@ -54,7 +53,7 @@ public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
     public async Task InitializeAsync(WebView2 webView, string paneId)
     {
         // Wait for WebView2 to initialize
-        await webView.EnsureCoreWebView2Async();
+        await WebView2Utility.EnsureCoreWebView2Async(webView, logger: _logger);
 
         _webViews[paneId] = webView;
 

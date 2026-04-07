@@ -25,7 +25,7 @@ namespace RDAT.Copilot.Core.Services;
 /// The linter uses case-insensitive matching with Unicode normalization for
 /// robust multilingual term detection in Arabic and English text.
 /// </summary>
-public sealed partial class AmtaLinterService : IAmtaLinterService, IDisposable
+public sealed class AmtaLinterService : IAmtaLinterService, IDisposable
 {
     private readonly ILogger<AmtaLinterService> _logger;
 

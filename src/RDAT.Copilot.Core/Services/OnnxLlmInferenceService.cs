@@ -118,8 +118,7 @@ public sealed class OnnxLlmInferenceService : ILocalInferenceService, IDisposabl
         try
         {
             // Try to load OnnxRuntimeGenAI
-            var genAiType = Type.GetType("Microsoft.ML.OnnxRuntimeGenAI.OntologyCausalLM, Microsoft.ML.OnnxRuntimeGenAI")
-                ?? Type.GetType("Microsoft.ML.OnnxRuntimeGenAI.Model, Microsoft.ML.OnnxRuntimeGenAI");
+            var genAiType = Type.GetType("Microsoft.ML.OnnxRuntimeGenAI.Model, Microsoft.ML.OnnxRuntimeGenAI");
 
             if (genAiType is not null)
             {

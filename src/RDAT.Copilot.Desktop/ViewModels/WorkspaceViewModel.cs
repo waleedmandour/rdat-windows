@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using RDAT.Copilot.Core.Interfaces;
+using RDAT.Copilot.Core.Constants;
 using RDAT.Copilot.Core.Models;
 
 namespace RDAT.Copilot.Desktop.ViewModels;
@@ -413,7 +414,7 @@ public partial class WorkspaceViewModel : ObservableObject
             {
                 try
                 {
-                    await Task.Delay(Constants.AppConstants.GrammarCheckDebounceMs, token).ConfigureAwait(false);
+                    await Task.Delay(AppConstants.GrammarCheckDebounceMs, token).ConfigureAwait(false);
                     if (token.IsCancellationRequested) return;
 
                     var sourceSentence = GetSourceSentenceForTarget(ActiveTargetLine);
@@ -448,7 +449,7 @@ public partial class WorkspaceViewModel : ObservableObject
             {
                 try
                 {
-                    await Task.Delay(Constants.AppConstants.AmtaLintDebounceMs, token).ConfigureAwait(false);
+                    await Task.Delay(AppConstants.AmtaLintDebounceMs, token).ConfigureAwait(false);
                     if (token.IsCancellationRequested) return;
 
                     await _amtaLinter.CheckAsync(textSnapshot, sourceSnapshot, token)

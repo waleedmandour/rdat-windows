@@ -2,7 +2,11 @@ namespace RDAT.Copilot.Desktop.Models;
 
 /// <summary>
 /// C# records that mirror the JavaScript bridge message types.
-/// Used for type-safe deserialization of WebView2 messages.
+/// Used for type-safe documentation and future strongly-typed deserialization.
+/// 
+/// Note: The current WebViewBridgeService uses JsonNode for dynamic parsing.
+/// These records serve as API documentation and can be adopted for
+/// strongly-typed message handling in future phases.
 /// </summary>
 
 /// <summary>
@@ -44,13 +48,15 @@ public record GrammarMarker(
 );
 
 /// <summary>
-/// Ghost text suggestion from the LLM.
+/// Ghost text marker for Monaco editor.
 /// </summary>
-public record GhostTextSuggestion(
-    string Channel,     // "pause", "burst", "predictive"
-    string InsertText,
-    int StartLine,
+public record GhostTextMarker(
+    int StartLineNumber,
     int StartColumn,
-    string ProviderId,
-    string Label
+    int EndLineNumber,
+    int EndColumn,
+    string Message,
+    string Severity,
+    string Source = "Grammar Checker"
 );
+

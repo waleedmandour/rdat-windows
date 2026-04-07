@@ -614,6 +614,8 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
 
     private async Task CheckRateLimitAsync()
     {
+        int waitMs = 0;
+
         lock (_rateLimitLock)
         {
             // Reset window if a minute has passed
@@ -623,10 +625,10 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
                 _minuteWindowStart = DateTime.UtcNow;
             }
 
-            // If we've hit the limit, wait
+            // If we've hit the limit, calculate wait time
             if (_requestsThisMinute >= 14) // Leave buffer below 15 RPM
             {
-                var waitMs = (int)(TimeSpan.FromMinutes(1) - (DateTime.UtcNow - _minuteWindowStart)).TotalMilliseconds;
+                waitMs = (int)(TimeSpan.FromMinutes(1) - (DateTime.UtcNow - _minuteWindowStart)).TotalMilliseconds;
                 if (waitMs > 0)
                 {
                     _logger.LogInformation("[Gemini] Rate limit reached, waiting {Ms}ms", waitMs);
@@ -634,7 +636,13 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
             }
         }
 
-        // Small delay to prevent bursting
+        // Actually wait outside the lock to avoid holding it during the delay
+        if (waitMs > 0)
+        {
+            await Task.Delay(Math.Min(waitMs, 5000)).ConfigureAwait(false);
+        }
+
+        // Small delay to prevent bursting even within limits
         await Task.Delay(100).ConfigureAwait(false);
     }
 
