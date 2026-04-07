@@ -31,7 +31,8 @@ public interface IAmtaLinterService
     /// <returns>Number of terms loaded.</returns>
     Task<int> LoadGlossaryAsync(
         string filePath,
-        IProgress<(double Progress, string Text)>? progress = null);
+        IProgress<(double Progress, string Text)>? progress = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Load a terminology glossary from an in-memory collection of term pairs.

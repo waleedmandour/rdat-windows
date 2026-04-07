@@ -1,3 +1,5 @@
+using RDAT.Copilot.Core.Models;
+
 namespace RDAT.Copilot.Core.Interfaces;
 
 /// <summary>
@@ -13,36 +15,25 @@ public interface IVectorDatabaseService
     /// <summary>
     /// Open or create the database at the given path.
     /// </summary>
-    Task OpenAsync(string dbPath);
+    Task OpenAsync(string dbPath, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Index a collection of text entries with their embeddings.
     /// </summary>
-    Task IndexBatchAsync(IEnumerable<(string Id, string SourceText, string TargetText, float[] Embedding)> entries);
+    Task IndexBatchAsync(IEnumerable<(string Id, string SourceText, string TargetText, float[] Embedding)> entries, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Search for the top-K most similar entries to the query embedding.
     /// </summary>
-    Task<IReadOnlyList<VectorSearchResult>> SearchAsync(float[] queryEmbedding, int topK = 5);
+    Task<IReadOnlyList<VectorSearchResult>> SearchAsync(float[] queryEmbedding, int topK = 5, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get the total number of indexed entries.
     /// </summary>
-    Task<long> CountAsync();
+    Task<long> CountAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Close the database connection.
     /// </summary>
-    Task CloseAsync();
+    Task CloseAsync(CancellationToken cancellationToken = default);
 }
-
-/// <summary>
-/// A vector search result with similarity score.
-/// </summary>
-public record VectorSearchResult(
-    string Id,
-    string SourceText,
-    string TargetText,
-    float Score,
-    double SearchMilliseconds
-);

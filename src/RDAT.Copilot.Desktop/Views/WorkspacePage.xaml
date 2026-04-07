@@ -15,6 +15,9 @@
         <converters:MsFormatter x:Key="MsFormatter"/>
         <converters:GrammarTypeToIconConverter x:Key="GrammarTypeToIconConverter"/>
         <converters:GrammarTypeToColorConverter x:Key="GrammarTypeToColorConverter"/>
+        <converters:LanguageDirectionToFlowDirectionConverter x:Key="LangDirFlowConverter"/>
+        <converters:AmtaSeverityToColorConverter x:Key="AmtaSeverityColorConverter"/>
+        <converters:AmtaSeverityToIconConverter x:Key="AmtaSeverityIconConverter"/>
     </Page.Resources>
 
     <Grid Background="{StaticResource RDATBgPrimaryBrush}">
@@ -131,6 +134,36 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Swap Language Direction Button -->
+                <Border Padding="12,6" CornerRadius="0">
+                    <Button Background="Transparent" BorderThickness="0"
+                            Padding="0"
+                            Command="{x:Bind ViewModel.SwapLanguageDirectionCommand}"
+                            ToolTipService.ToolTip="Swap language direction">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE72A;" FontSize="12"
+                                     Foreground="{StaticResource RDATTextMutedBrush}"/>
+                            <TextBlock Text="Swap Direction" FontSize="12"
+                                      Foreground="{StaticResource RDATTextMutedBrush}"/>
+                        </StackPanel>
+                    </Button>
+                </Border>
+
+                <!-- Clear Workspace Button -->
+                <Border Padding="12,6" CornerRadius="0">
+                    <Button Background="Transparent" BorderThickness="0"
+                            Padding="0"
+                            Command="{x:Bind ViewModel.ClearWorkspaceCommand}"
+                            ToolTipService.ToolTip="Clear workspace">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE74D;" FontSize="12"
+                                     Foreground="{StaticResource RDATTextMutedBrush}"/>
+                            <TextBlock Text="Clear" FontSize="12"
+                                      Foreground="{StaticResource RDATTextMutedBrush}"/>
+                        </StackPanel>
+                    </Button>
+                </Border>
+
                 <!-- Phase 5: New Window Button -->
                 <Border Padding="12,6" CornerRadius="0">
                     <Button Background="Transparent" BorderThickness="0"
@@ -238,7 +271,8 @@
                 </controls:GridSplitter>
 
                 <!-- TARGET Pane -->
-                <Grid Grid.Column="2">
+                <Grid Grid.Column="2"
+                      FlowDirection="{x:Bind ViewModel.LanguageDirection, Mode=OneWay, Converter={StaticResource LangDirFlowConverter}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="28"/>
                         <RowDefinition Height="*"/>
@@ -539,51 +573,117 @@
                 <!-- Error List Content -->
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                              Padding="4,0">
-                    <ListView ItemsSource="{x:Bind ViewModel.GrammarIssues}"
-                             SelectionMode="None">
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Border Padding="8,4" Margin="0,1" CornerRadius="3"
-                                       Background="{StaticResource RDATBgTertiaryBrush}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
+                    <!-- Grammar Issues -->
+                    <StackPanel>
+                        <TextBlock Text="Grammar &amp; Style" FontSize="10"
+                                  Foreground="{StaticResource RDATTextDimBrush}"
+                                  FontWeight="SemiBold" Margin="4,2,4,2"
+                                  Visibility="{x:Bind ViewModel.GrammarIssues.Count, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}}"/>
+                        <ListView ItemsSource="{x:Bind ViewModel.GrammarIssues}"
+                                 SelectionMode="None">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="8,4" Margin="0,1" CornerRadius="3"
+                                           Background="{StaticResource RDATBgTertiaryBrush}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
-                                        <!-- Error type icon -->
-                                        <FontIcon Grid.Column="0" Margin="0,0,8,0"
-                                                 Glyph="{Binding Type, Converter={StaticResource GrammarTypeToIconConverter}}"
-                                                 FontSize="12"
-                                                 Foreground="{Binding Type, Converter={StaticResource GrammarTypeToColorConverter}}"/>
+                                            <!-- Error type icon -->
+                                            <FontIcon Grid.Column="0" Margin="0,0,8,0"
+                                                     Glyph="{Binding Type, Converter={StaticResource GrammarTypeToIconConverter}}"
+                                                     FontSize="12"
+                                                     Foreground="{Binding Type, Converter={StaticResource GrammarTypeToColorConverter}}"/>
 
-                                        <!-- Error message -->
-                                        <StackPanel Grid.Column="1" Spacing="2">
-                                            <TextBlock Text="{Binding Message}"
-                                                      FontSize="11" Foreground="{StaticResource RDATTextBrush}"
-                                                      TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}">
-                                                <Run Text="Line "/>
-                                                <Run Text="{Binding StartLineNumber}"/>
-                                                <Run Text=" · Suggestion: "/>
-                                                <Run Text="{Binding Suggestion}"
-                                                     Foreground="{StaticResource RDATTealBrush}"/>
-                                            </TextBlock>
-                                        </StackPanel>
+                                            <!-- Error message -->
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Text="{Binding Message}"
+                                                          FontSize="11" Foreground="{StaticResource RDATTextBrush}"
+                                                          TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}">
+                                                    <Run Text="Line "/>
+                                                    <Run Text="{Binding StartLineNumber}"/>
+                                                    <Run Text=" · Suggestion: "/>
+                                                    <Run Text="{Binding Suggestion}"
+                                                         Foreground="{StaticResource RDATTealBrush}"/>
+                                                </TextBlock>
+                                            </StackPanel>
 
-                                        <!-- Quick fix button -->
-                                        <Button Grid.Column="2" Background="Transparent" BorderThickness="0"
-                                               Padding="4" Click="AcceptGrammarFix_Click"
-                                               ToolTipService.ToolTip="Accept suggestion">
-                                            <FontIcon Glyph="&#xE8FB;" FontSize="10"
-                                                     Foreground="{StaticResource RDATTextMutedBrush}"/>
-                                        </Button>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
+                                            <!-- Quick fix button -->
+                                            <Button Grid.Column="2" Background="Transparent" BorderThickness="0"
+                                                   Padding="4" Click="AcceptGrammarFix_Click"
+                                                   ToolTipService.ToolTip="Accept suggestion">
+                                                <FontIcon Glyph="&#xE8FB;" FontSize="10"
+                                                         Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <!-- AMTA Terminology Issues -->
+                        <TextBlock Text="Terminology" FontSize="10"
+                                  Foreground="{StaticResource RDATTextDimBrush}"
+                                  FontWeight="SemiBold" Margin="4,8,4,2"
+                                  Visibility="{x:Bind ViewModel.AmtaIssueCount, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}}"/>
+                        <ListView ItemsSource="{x:Bind ViewModel.AmtaIssues}"
+                                 SelectionMode="None">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="8,4" Margin="0,1" CornerRadius="3"
+                                           Background="{StaticResource RDATBgTertiaryBrush}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Severity icon -->
+                                            <FontIcon Grid.Column="0" Margin="0,0,8,0"
+                                                     Glyph="{Binding Severity, Converter={StaticResource AmtaSeverityIconConverter}}"
+                                                     FontSize="12"
+                                                     Foreground="{Binding Severity, Converter={StaticResource AmtaSeverityColorConverter}}"/>
+
+                                            <!-- Issue message -->
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="{Binding Type}" FontSize="10"
+                                                              Foreground="{Binding Severity, Converter={StaticResource AmtaSeverityColorConverter}}"
+                                                              FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding Domain}" FontSize="9"
+                                                              Foreground="{StaticResource RDATTextDimBrush}"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Message}"
+                                                          FontSize="11" Foreground="{StaticResource RDATTextBrush}"
+                                                          TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"
+                                                          TextWrapping="Wrap" MaxLines="2">
+                                                    <Run Text="Found: "/>
+                                                    <Run Text="{Binding OriginalText}"/>
+                                                    <Run Text=" → Suggested: "/>
+                                                    <Run Text="{Binding Suggestion}"
+                                                         Foreground="{StaticResource RDATTealBrush}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+
+                                            <!-- Quick fix button -->
+                                            <Button Grid.Column="2" Background="Transparent" BorderThickness="0"
+                                                   Padding="4" Click="AcceptAmtaFix_Click"
+                                                   ToolTipService.ToolTip="Accept terminology suggestion">
+                                                <FontIcon Glyph="&#xE8FB;" FontSize="10"
+                                                         Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
                 </ScrollViewer>
 
                 <!-- Quality Feedback (shown after estimation) -->

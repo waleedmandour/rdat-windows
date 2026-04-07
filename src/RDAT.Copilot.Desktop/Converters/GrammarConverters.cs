@@ -87,11 +87,11 @@ public class GrammarTypeToColorConverter : IValueConverter
     {
         return value?.ToString()?.ToLowerInvariant() switch
         {
-            "spelling" => new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(0xEF, 0x44, 0x44)),    // Red
-            "grammar" => new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(0xEF, 0x44, 0x44)),    // Red
-            "punctuation" => new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(0xF5, 0x9E, 0x0B)), // Amber
-            "style" => new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(0xA7, 0x8B, 0xFA)),   // Purple
-            _ => new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(0xEF, 0x44, 0x44))     // Default red
+            "spelling" => new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(0xFF, 0xEF, 0x44, 0x44)),    // Red
+            "grammar" => new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(0xFF, 0xEF, 0x44, 0x44)),    // Red
+            "punctuation" => new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(0xFF, 0xF5, 0x9E, 0x0B)), // Amber
+            "style" => new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(0xFF, 0xA7, 0x8B, 0xFA)),   // Purple
+            _ => new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(0xFF, 0xEF, 0x44, 0x44))     // Default red
         };
     }
 

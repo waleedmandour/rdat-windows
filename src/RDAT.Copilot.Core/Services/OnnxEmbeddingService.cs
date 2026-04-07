@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using RDAT.Copilot.Core.Constants;
@@ -17,8 +18,14 @@ namespace RDAT.Copilot.Core.Services;
 /// </summary>
 public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
 {
+    private readonly ILogger<OnnxEmbeddingService>? _logger;
     private InferenceSession? _session;
     private bool _disposed;
+
+    public OnnxEmbeddingService(ILogger<OnnxEmbeddingService>? logger = null)
+    {
+        _logger = logger;
+    }
 
     public bool IsReady => _session is not null;
 
@@ -30,7 +37,8 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
     /// </summary>
     public async Task InitializeAsync(
         string modelPath,
-        IProgress<(double Progress, string Text)>? progress = null)
+        IProgress<(double Progress, string Text)>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(modelPath);
 
@@ -69,6 +77,7 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
 
         await Task.Run(() =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             using var sessionOptions = new SessionOptions();
 
             // Use CPU by default. DirectML can be added for GPU/NPU:
@@ -91,7 +100,7 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<float[]> EmbedAsync(string text)
+    public async Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default)
     {
         if (_session is null)
             throw new InvalidOperationException("Embedding model is not loaded. Call InitializeAsync first.");
@@ -100,12 +109,12 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
             return new float[AppConstants.EmbeddingDimensions];
 
         text = text.Trim();
-        var results = await EmbedBatchAsync(new[] { text }).ConfigureAwait(false);
+        var results = await EmbedBatchAsync(new[] { text }, cancellationToken).ConfigureAwait(false);
         return results[0];
     }
 
     /// <inheritdoc/>
-    public async Task<float[][]> EmbedBatchAsync(string[] texts)
+    public async Task<float[][]> EmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
     {
         if (_session is null)
             throw new InvalidOperationException("Embedding model is not loaded. Call InitializeAsync first.");
@@ -131,6 +140,7 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
 
         return await Task.Run(() =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // Tokenize all texts (simple whitespace + subword for multilingual)
             var tokenIds = validTexts.Select(TokenizeSimple).ToArray();
             var maxLen = tokenIds.Max(t => t.Length);
@@ -333,18 +343,8 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
         if (outputNames.Count == 0)
             throw new InvalidOperationException("ONNX model has no outputs.");
 
-        // Log model signature for diagnostics
-        var inputMeta = string.Join(", ", inputNames.Select(n =>
-        {
-            var meta = _session.InputMetadata[n];
-            return $"{n}=[{string.Join(",", meta.Dimensions)}]";
-        }));
-
-        var outputMeta = string.Join(", ", outputNames.Select(n =>
-        {
-            var meta = _session.OutputMetadata[n];
-            return $"{n}=[{string.Join(",", meta.Dimensions)}]";
-        }));
+        _logger?.LogInformation("[Embedding] Model signature: inputs=[{Inputs}], outputs=[{Outputs}]",
+            string.Join(", ", inputNames), string.Join(", ", outputNames));
     }
 
     public void Dispose()

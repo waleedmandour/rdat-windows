@@ -41,4 +41,44 @@ public interface IWebViewBridge
     /// Gets the current text content from an editor pane.
     /// </summary>
     Task<string> GetTextAsync(string paneId);
+
+    /// <summary>
+    /// Send a RAG (TM match) ghost text suggestion to the target editor.
+    /// </summary>
+    Task SetRagSuggestionAsync(string text, double score);
+
+    /// <summary>
+    /// Clear the RAG suggestion from the target editor.
+    /// </summary>
+    Task ClearRagSuggestionAsync();
+
+    /// <summary>
+    /// Highlight a specific line in the source editor.
+    /// </summary>
+    Task HighlightSourceLineAsync(int lineNumber);
+
+    /// <summary>
+    /// Send grammar error markers to the target editor.
+    /// </summary>
+    Task SetGrammarMarkersAsync(object[] markers);
+
+    /// <summary>
+    /// Clear all grammar markers from the target editor.
+    /// </summary>
+    Task ClearGrammarMarkersAsync();
+
+    /// <summary>
+    /// Apply a quick fix to the target editor.
+    /// </summary>
+    Task ApplyQuickFixAsync(int lineNumber, int startColumn, int endColumn, string newText);
+
+    /// <summary>
+    /// Send AMTA terminology lint markers to the target editor.
+    /// </summary>
+    Task SetAmtaLintMarkersAsync(object[] markers);
+
+    /// <summary>
+    /// Clear all AMTA lint markers from the target editor.
+    /// </summary>
+    Task ClearAmtaLintMarkersAsync();
 }

@@ -25,12 +25,10 @@ namespace RDAT.Copilot.Core.Services;
 ///   Implements basic rate limiting with configurable RPM (requests per minute).
 ///   Tracks remaining requests from API response headers.
 /// </summary>
-public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
+public sealed class GeminiCloudService : IGeminiCloudService
 {
     private readonly ICredentialService _credentialService;
     private readonly ILogger<GeminiCloudService> _logger;
-    private readonly HttpClient _httpClient;
-
     private const string CredentialResource = "RDAT-Gemini";
     private const string CredentialUsername = "gemini-api-key";
 
@@ -41,6 +39,7 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
     };
 
     private GeminiState _state = GeminiState.NotConfigured;
+    private readonly object _stateLock = new();
     private GeminiRateLimit? _rateLimit;
 
     // Rate limiting state
@@ -50,14 +49,18 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
 
     public GeminiState State
     {
-        get => _state;
+        get
+        {
+            lock (_stateLock) return _state;
+        }
         private set
         {
-            if (_state != value)
+            lock (_stateLock)
             {
+                if (_state == value) return;
                 _state = value;
-                StateChanged?.Invoke(this, value);
             }
+            StateChanged?.Invoke(this, value);
         }
     }
 
@@ -65,21 +68,17 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
 
     public event EventHandler<GeminiState>? StateChanged;
 
+    private readonly HttpClient _httpClient;
+
     public GeminiCloudService(
         ICredentialService credentialService,
-        ILogger<GeminiCloudService> logger)
+        ILogger<GeminiCloudService> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _credentialService = credentialService;
         _logger = logger;
+        _httpClient = httpClientFactory.CreateClient("Gemini");
 
-        _httpClient = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(30)
-        };
-
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "RDAT-Copilot/2.0");
-
-        // Check if a key is already stored
         if (_credentialService.HasCredential(CredentialResource, CredentialUsername))
         {
             State = GeminiState.Configured;
@@ -192,7 +191,7 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
             return Array.Empty<GrammarIssue>();
         }
 
-        await CheckRateLimitAsync().ConfigureAwait(false);
+        await CheckRateLimitAsync(cancellationToken).ConfigureAwait(false);
         State = GeminiState.Busy;
         var sw = Stopwatch.StartNew();
 
@@ -242,7 +241,7 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
             return new QualityEstimationResult(0, 0, 0, 0, 0, "Gemini API key not configured.", 0);
         }
 
-        await CheckRateLimitAsync().ConfigureAwait(false);
+        await CheckRateLimitAsync(cancellationToken).ConfigureAwait(false);
         State = GeminiState.Busy;
         var sw = Stopwatch.StartNew();
 
@@ -286,7 +285,7 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
         var apiKey = _credentialService.GetCredential(CredentialResource, CredentialUsername);
         if (string.IsNullOrWhiteSpace(apiKey)) return null;
 
-        await CheckRateLimitAsync().ConfigureAwait(false);
+        await CheckRateLimitAsync(cancellationToken).ConfigureAwait(false);
         State = GeminiState.Busy;
 
         try
@@ -612,7 +611,7 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
     // Rate Limiting
     // ════════════════════════════════════════════════════════════════
 
-    private async Task CheckRateLimitAsync()
+    private async Task CheckRateLimitAsync(CancellationToken cancellationToken = default)
     {
         int waitMs = 0;
 
@@ -639,11 +638,11 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
         // Actually wait outside the lock to avoid holding it during the delay
         if (waitMs > 0)
         {
-            await Task.Delay(Math.Min(waitMs, 5000)).ConfigureAwait(false);
+            await Task.Delay(Math.Min(waitMs, 5000), cancellationToken).ConfigureAwait(false);
         }
 
         // Small delay to prevent bursting even within limits
-        await Task.Delay(100).ConfigureAwait(false);
+        await Task.Delay(100, cancellationToken).ConfigureAwait(false);
     }
 
     private void IncrementRequestCount()
@@ -654,8 +653,4 @@ public sealed class GeminiCloudService : IGeminiCloudService, IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        _httpClient.Dispose();
-    }
 }

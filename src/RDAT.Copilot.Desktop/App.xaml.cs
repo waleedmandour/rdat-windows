@@ -60,14 +60,20 @@ public partial class App : Application
         services.AddSingleton<IGrammarCheckerService, GrammarCheckerService>();
         services.AddSingleton<IAmtaLinterService, AmtaLinterService>();
         services.AddSingleton<ICredentialService, CredentialLockerService>();
+        // Register named HttpClient for Gemini API (managed lifecycle, prevents socket exhaustion)
+        services.AddHttpClient("Gemini", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "RDAT-Copilot/2.0");
+        });
         services.AddSingleton<IGeminiCloudService, GeminiCloudService>();
 
         // ─── Core Services (Phase 5: Document Import) ──────────────
         services.AddSingleton<IDocxImportService, DocxImportService>();
 
         // ─── Desktop Services ───────────────────────────────────────
-        services.AddSingleton<WebViewBridgeService>();
-        services.AddSingleton<NavigationService>();
+        services.AddSingleton<IWebViewBridge, WebViewBridgeService>();
+        services.AddTransient<NavigationService>();
 
         // ─── ViewModels ─────────────────────────────────────────────
         services.AddSingleton<WorkspaceViewModel>();
@@ -96,6 +102,12 @@ public partial class App : Application
 
                 var rag = Services.GetService<IRagPipelineService>();
                 if (rag is not null) await rag.ShutdownAsync();
+
+                // Dispose the DI container to release all IDisposable services
+                if (Services is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
             }
             catch (Exception ex)
             {

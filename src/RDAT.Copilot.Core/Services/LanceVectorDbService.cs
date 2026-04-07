@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using LanceDB;
+using Microsoft.Extensions.Logging;
 using RDAT.Copilot.Core.Constants;
 using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;
@@ -17,15 +19,21 @@ namespace RDAT.Copilot.Core.Services;
 /// </summary>
 public sealed class LanceVectorDbService : IVectorDatabaseService, IDisposable
 {
+    private readonly ILogger<LanceVectorDbService>? _logger;
     private readonly string _tableName = "translation_memory";
     private Connection? _connection;
     private LanceTable? _table;
     private bool _disposed;
 
+    public LanceVectorDbService(ILogger<LanceVectorDbService>? logger = null)
+    {
+        _logger = logger;
+    }
+
     public bool IsReady => _table is not null;
 
     /// <inheritdoc/>
-    public async Task OpenAsync(string dbPath)
+    public async Task OpenAsync(string dbPath, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbPath);
 
@@ -34,11 +42,11 @@ public sealed class LanceVectorDbService : IVectorDatabaseService, IDisposable
             Directory.CreateDirectory(dbPath);
             _connection = new LanceDBConnection(dbPath);
             _table = _connection.OpenTable(_tableName);
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
-    public async Task IndexBatchAsync(IEnumerable<(string Id, string SourceText, string TargetText, float[] Embedding)> entries)
+    public async Task IndexBatchAsync(IEnumerable<(string Id, string SourceText, string TargetText, float[] Embedding)> entries, CancellationToken cancellationToken = default)
     {
         if (_connection is null)
             throw new InvalidOperationException("Database is not open. Call OpenAsync first.");
@@ -64,16 +72,17 @@ public sealed class LanceVectorDbService : IVectorDatabaseService, IDisposable
                 // Try to add to existing table
                 _table!.Add(rows, vectors);
             }
-            catch
+            catch (Exception ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("does not exist", StringComparison.OrdinalIgnoreCase))
             {
-                // If table doesn't exist, create it
+                _logger?.LogDebug(ex, "[LanceDB] Table not found — creating new table: {TableName}", _tableName);
                 _table = _connection!.CreateTable(_tableName, rows, vectors);
             }
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<VectorSearchResult>> SearchAsync(float[] queryEmbedding, int topK = 5)
+    public async Task<IReadOnlyList<VectorSearchResult>> SearchAsync(float[] queryEmbedding, int topK = 5, CancellationToken cancellationToken = default)
     {
         if (_table is null)
             throw new InvalidOperationException("Database is not open. Call OpenAsync first.");
@@ -104,13 +113,13 @@ public sealed class LanceVectorDbService : IVectorDatabaseService, IDisposable
                     SearchMilliseconds: sw.Elapsed.TotalMilliseconds
                 );
             }).ToList();
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
 
         return results;
     }
 
     /// <inheritdoc/>
-    public async Task<long> CountAsync()
+    public async Task<long> CountAsync(CancellationToken cancellationToken = default)
     {
         if (_table is null) return 0;
 
@@ -121,21 +130,22 @@ public sealed class LanceVectorDbService : IVectorDatabaseService, IDisposable
                 var countResult = _table!.CountRows();
                 return (long)countResult;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger?.LogDebug(ex, "[LanceDB] Failed to count rows");
                 return 0L;
             }
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
-    public async Task CloseAsync()
+    public async Task CloseAsync(CancellationToken cancellationToken = default)
     {
         await Task.Run(() =>
         {
             _table = null;
             _connection = null;
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -144,7 +154,8 @@ public sealed class LanceVectorDbService : IVectorDatabaseService, IDisposable
     /// </summary>
     public async Task CreateTableAsync(
         IEnumerable<LanceTmRow> rows,
-        IEnumerable<float[]> vectors)
+        IEnumerable<float[]> vectors,
+        CancellationToken cancellationToken = default)
     {
         if (_connection is null)
             throw new InvalidOperationException("Database is not open.");
@@ -154,7 +165,7 @@ public sealed class LanceVectorDbService : IVectorDatabaseService, IDisposable
             var rowList = rows.ToList();
             var vectorList = vectors.ToList();
             _table = _connection!.CreateTable(_tableName, rowList, vectorList);
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

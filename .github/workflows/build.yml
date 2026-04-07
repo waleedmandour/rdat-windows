@@ -30,28 +30,37 @@ jobs:
         run: dotnet restore RDAT.Copilot.sln
 
       - name: Build Core library
-        run: dotnet build src/RDAT.Copilot.Core/RDAT.Copilot.Core.csproj \
-            --configuration ${{ env.CONFIGURATION }} \
-            --no-restore \
+        run: dotnet build src/RDAT.Copilot.Core/RDAT.Copilot.Core.csproj ^
+            --configuration ${{ env.CONFIGURATION }} ^
+            --no-restore ^
             -p:Platform=${{ matrix.platform }}
 
       - name: Build Desktop app
-        run: dotnet build src/RDAT.Copilot.Desktop/RDAT.Copilot.Desktop.csproj \
-            --configuration ${{ env.CONFIGURATION }} \
-            --no-restore \
-            -p:Platform=${{ matrix.platform }} \
+        run: dotnet build src/RDAT.Copilot.Desktop/RDAT.Copilot.Desktop.csproj ^
+            --configuration ${{ env.CONFIGURATION }} ^
+            --no-restore ^
+            -p:Platform=${{ matrix.platform }} ^
             -p:WindowsAppSDKSelfContained=true
 
       - name: Run Core tests
-        run: dotnet test tests/RDAT.Copilot.Core.Tests/RDAT.Copilot.Core.Tests.csproj \
-            --configuration ${{ env.CONFIGURATION }} \
-            --no-build \
-            --verbosity normal \
+        run: dotnet test tests/RDAT.Copilot.Core.Tests/RDAT.Copilot.Core.Tests.csproj ^
+            --configuration ${{ env.CONFIGURATION }} ^
+            --no-build ^
+            --verbosity normal ^
             -p:Platform=${{ matrix.platform }}
+
+      - name: Publish WinUI 3 App (Self-Contained Unpackaged)
+        run: dotnet publish src/RDAT.Copilot.Desktop/RDAT.Copilot.Desktop.csproj ^
+            -c Release ^
+            -f net9.0-windows10.0.19041.0 ^
+            -p:Platform=${{ matrix.platform }} ^
+            -p:RuntimeIdentifier=win-${{ matrix.platform }} ^
+            -p:WindowsPackageType=None ^
+            --self-contained
 
       - name: Upload Desktop build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: RDAT-Copilot-${{ matrix.platform }}
-          path: src/RDAT.Copilot.Desktop/bin/${{ env.CONFIGURATION }}/net9.0-windows10.0.19041.0/${{ matrix.platform }}/publish/
-          if-no-files-found: ignore
+          name: RDAT-Copilot-Desktop-Windows
+          path: src/RDAT.Copilot.Desktop/bin/Release/net9.0-windows10.0.19041.0/win-${{ matrix.platform }}/publish/
+          if-no-files-found: error

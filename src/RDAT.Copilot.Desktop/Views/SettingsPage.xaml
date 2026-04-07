@@ -6,6 +6,8 @@
 
     <Page.Resources>
         <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+        <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+        <converters:LanguageDirectionToBoolConverter x:Key="LangDirConverter"/>
     </Page.Resources>
 
     <Grid Background="{StaticResource RDATBgPrimaryBrush}" Padding="32">
@@ -45,15 +47,27 @@
                                       Foreground="{StaticResource RDATTextMutedBrush}"/>
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <RadioButton Content="English → Arabic (إنجليزية → عربية)"
-                                           IsChecked="True" GroupName="LangDir"
+                                           IsChecked="{x:Bind ViewModel.LanguageDirection, Mode=TwoWay, Converter={StaticResource LangDirConverter}, ConverterParameter=EnToAr}"
+                                           GroupName="LangDir"
                                            Foreground="{StaticResource RDATTextBrush}"/>
                                 <RadioButton Content="Arabic → English (عربية → إنجليزية)"
+                                           IsChecked="{x:Bind ViewModel.LanguageDirection, Mode=TwoWay, Converter={StaticResource LangDirConverter}, ConverterParameter=ArToEn}"
                                            GroupName="LangDir"
                                            Foreground="{StaticResource RDATTextBrush}"/>
                             </StackPanel>
+                            <TextBlock Text="Changing direction swaps source/target panes and adjusts text layout."
+                                      FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
+
+                <!-- SaveStatus InfoBar (shown when status message is set) -->
+                <InfoBar
+                    IsOpen="{x:Bind ViewModel.SaveStatus, Mode=OneWay, Converter={StaticResource StringToVisibilityConverter}}"
+                    Severity="Informational"
+                    Title="Status"
+                    Message="{x:Bind ViewModel.SaveStatus, Mode=OneWay}"
+                    IsClosable="True" Margin="0,0,0,4"/>
 
                 <!-- Phase 2: Translation Memory Section -->
                 <Border Background="{StaticResource RDATBgSecondaryBrush}"

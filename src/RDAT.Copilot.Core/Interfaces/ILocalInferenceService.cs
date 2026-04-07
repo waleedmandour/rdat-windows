@@ -16,7 +16,7 @@ public interface ILocalInferenceService
     /// <summary>
     /// Initialize the ONNX model from disk.
     /// </summary>
-    Task InitializeAsync(string modelPath, IProgress<(double Progress, string Text)>? progress = null);
+    Task InitializeAsync(string modelPath, IProgress<(double Progress, string Text)>? progress = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Generate a completion from the chat messages.

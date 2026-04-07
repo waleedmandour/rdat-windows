@@ -45,11 +45,18 @@ public sealed class GrammarCheckerService : IGrammarCheckerService, IDisposable
     };
 
     private GrammarCheckState _state = GrammarCheckState.Idle;
+    private readonly object _stateLock = new();
 
     public GrammarCheckState State
     {
-        get => _state;
-        private set => _state = value;
+        get
+        {
+            lock (_stateLock) return _state;
+        }
+        private set
+        {
+            lock (_stateLock) _state = value;
+        }
     }
 
     public GrammarCheckerService(

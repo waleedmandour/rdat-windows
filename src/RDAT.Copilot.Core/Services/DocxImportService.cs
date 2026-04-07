@@ -2,6 +2,7 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Extensions.Logging;
 using RDAT.Copilot.Core.Interfaces;
+using RDAT.Copilot.Core.Models;
 
 namespace RDAT.Copilot.Core.Services;
 

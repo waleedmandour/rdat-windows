@@ -99,14 +99,14 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task OnTargetCursorChangedAsync(int lineNumber, int column)
+    public Task OnTargetCursorChangedAsync(int lineNumber, int column, CancellationToken cancellationToken = default)
     {
-        if (!IsActive) return;
+        if (!IsActive) return Task.CompletedTask;
 
         _currentTargetLine = lineNumber;
         _currentTargetColumn = column;
 
-        if (!_inferenceService.IsReady) return;
+        if (!_inferenceService.IsReady) return Task.CompletedTask;
 
         // Get current and previous line text from target
         var currentLine = GetTargetLine(lineNumber);
@@ -114,7 +114,7 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
         var textBeforeCursor = column > 1 ? currentLine[..(column - 1)] : string.Empty;
 
         // Only trigger if there's something typed on the current line
-        if (string.IsNullOrWhiteSpace(textBeforeCursor)) return;
+        if (string.IsNullOrWhiteSpace(textBeforeCursor)) return Task.CompletedTask;
 
         // ─── Channel 5: Burst (0.8s debounce) ─────────────────────────
         CancelBurstTimer();
@@ -158,22 +158,23 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
             catch (OperationCanceledException) { }
         }, pauseToken);
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task OnTargetTextChangedAsync(string fullText)
+    public Task OnTargetTextChangedAsync(string fullText, CancellationToken cancellationToken = default)
     {
-        if (!IsActive) return;
+        if (!IsActive) return Task.CompletedTask;
 
         _currentTargetText = fullText;
 
         // Clear stale suggestions when text changes significantly
         ClearSuggestion?.Invoke(this, "all");
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task OnSourceTextChangedAsync(string fullText)
+    public async Task OnSourceTextChangedAsync(string fullText, CancellationToken cancellationToken = default)
     {
         if (!IsActive) return;
         if (!_inferenceService.IsReady) return;
@@ -207,8 +208,6 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
                 await FirePrefetchChannelAsync(sourceSentence).ConfigureAwait(false);
             }
         }
-
-        await Task.CompletedTask;
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -252,7 +251,7 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
         int line, int col, string textBeforeCursor,
         string previousLine, CancellationToken cancellationToken)
     {
-        var prompt = BuildPausePrompt(textBeforeCursor, previousLine);
+        var prompt = await BuildPausePromptAsync(textBeforeCursor, previousLine, cancellationToken).ConfigureAwait(false);
 
         if (string.IsNullOrWhiteSpace(prompt)) return;
 
@@ -334,7 +333,7 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
     /// Build a context-rich prompt for pause continuation (5-20 words).
     /// Includes previous lines, source sentence, and partial translation.
     /// </summary>
-    private string BuildPausePrompt(string textBeforeCursor, string previousLine)
+    private async Task<string> BuildPausePromptAsync(string textBeforeCursor, string previousLine, CancellationToken cancellationToken)
     {
         var sb = new System.Text.StringBuilder();
         sb.Append("Continue this translation (5-20 words):\n\n");
@@ -362,14 +361,17 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
         {
             try
             {
-                // Quick sync check — don't await for performance
-                var ragMatch = _ragPipeline.GetBestMatchAsync(sourceSentence).GetAwaiter().GetResult();
+                var ragMatch = await _ragPipeline.GetBestMatchAsync(sourceSentence, cancellationToken).ConfigureAwait(false);
                 if (ragMatch is not null && ragMatch.Score >= 0.8)
                 {
                     sb.Append($"[Reference translation]: {ragMatch.Entry.TargetText}\n");
                 }
             }
-            catch { }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[GhostText] RAG lookup failed for pause prompt");
+            }
         }
 
         sb.Append($"[Partial translation]: ...{textBeforeCursor[^Math.Min(150, textBeforeCursor.Length)..]}");
@@ -449,15 +451,21 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
 
     private void CancelBurstTimer()
     {
-        try { _burstCts?.Cancel(); } catch { }
-        try { _burstCts?.Dispose(); } catch { }
+        if (_burstCts is not null)
+        {
+            try { _burstCts.Cancel(); } catch (ObjectDisposedException) { }
+            try { _burstCts.Dispose(); } catch (ObjectDisposedException) { }
+        }
         _burstCts = null;
     }
 
     private void CancelPauseTimer()
     {
-        try { _pauseCts?.Cancel(); } catch { }
-        try { _pauseCts?.Dispose(); } catch { }
+        if (_pauseCts is not null)
+        {
+            try { _pauseCts.Cancel(); } catch (ObjectDisposedException) { }
+            try { _pauseCts.Dispose(); } catch (ObjectDisposedException) { }
+        }
         _pauseCts = null;
     }
 

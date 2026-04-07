@@ -13,15 +13,15 @@ public interface IEmbeddingService
     /// <summary>
     /// Initialize the embedding model from disk.
     /// </summary>
-    Task InitializeAsync(string modelPath, IProgress<(double Progress, string Text)>? progress = null);
+    Task InitializeAsync(string modelPath, IProgress<(double Progress, string Text)>? progress = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Generate a 384-dimensional embedding vector for the given text.
     /// </summary>
-    Task<float[]> EmbedAsync(string text);
+    Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Generate embeddings for multiple texts in batch.
     /// </summary>
-    Task<float[][]> EmbedBatchAsync(string[] texts);
+    Task<float[][]> EmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default);
 }

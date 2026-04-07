@@ -28,12 +28,12 @@ public interface IGeminiCloudService
     /// </summary>
     /// <param name="apiKey">The Gemini API key.</param>
     /// <returns>True if the key was validated successfully.</returns>
-    Task<bool> ConfigureAsync(string apiKey);
+    Task<bool> ConfigureAsync(string apiKey, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validate the currently stored API key by making a lightweight test call.
     /// </summary>
-    Task<bool> ValidateKeyAsync();
+    Task<bool> ValidateKeyAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Run grammar/spell/style check using Gemini.
@@ -82,7 +82,7 @@ public interface IGeminiCloudService
     /// <summary>
     /// Remove the stored API key.
     /// </summary>
-    Task RemoveApiKeyAsync();
+    Task RemoveApiKeyAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Raised when the Gemini service state changes.

@@ -51,6 +51,17 @@ public record TmStats(
 );
 
 /// <summary>
+/// A vector search result with similarity score.
+/// </summary>
+public record VectorSearchResult(
+    string Id,
+    string SourceText,
+    string TargetText,
+    float Score,
+    double SearchMilliseconds
+);
+
+/// <summary>
 /// Result of a TM import operation (TMX or CSV).
 /// </summary>
 /// <param name="TotalRows">Total rows found in the import file.</param>

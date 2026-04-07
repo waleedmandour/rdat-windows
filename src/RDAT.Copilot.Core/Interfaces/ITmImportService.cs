@@ -38,5 +38,5 @@ public interface ITmImportService
     /// </summary>
     /// <param name="filePath">Path to the TM file.</param>
     /// <returns>Estimated number of translation units.</returns>
-    Task<int> EstimateCountAsync(string filePath);
+    Task<int> EstimateCountAsync(string filePath, CancellationToken cancellationToken = default);
 }

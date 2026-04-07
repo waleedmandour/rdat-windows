@@ -1,6 +1,6 @@
-namespace RDAT.Copilot.Core.Interfaces;
-
 using RDAT.Copilot.Core.Models;
+
+namespace RDAT.Copilot.Core.Interfaces;
 
 /// <summary>
 /// Contract for the LLM priority queue engine (Phase 3).
@@ -37,7 +37,7 @@ public interface ILlmQueueService
     /// Stop the queue processing loop gracefully.
     /// Cancels all pending requests and waits for the current generation to finish.
     /// </summary>
-    Task StopAsync();
+    Task StopAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Enqueue a generation request with the specified priority.
@@ -45,7 +45,7 @@ public interface ILlmQueueService
     /// </summary>
     /// <param name="request">The LLM generation request.</param>
     /// <returns>The unique request ID for tracking.</returns>
-    Task<string> EnqueueAsync(LlmRequest request);
+    Task<string> EnqueueAsync(LlmRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Cancel all pending requests in the queue.

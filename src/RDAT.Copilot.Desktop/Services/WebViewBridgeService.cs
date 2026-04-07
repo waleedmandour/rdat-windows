@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CommunityToolkit.Mvvm.Messaging;
@@ -35,8 +36,8 @@ namespace RDAT.Copilot.Desktop.Services;
 public class WebViewBridgeService : IWebViewBridge
 {
     private readonly ILogger<WebViewBridgeService> _logger;
-    private readonly Dictionary<string, WebView2> _webViews = new();
-    private readonly Dictionary<string, TaskCompletionSource<string>> _pendingGetText = new();
+    private readonly ConcurrentDictionary<string, WebView2> _webViews = new();
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _pendingGetText = new();
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {

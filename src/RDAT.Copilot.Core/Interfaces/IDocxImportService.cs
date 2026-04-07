@@ -1,3 +1,5 @@
+using RDAT.Copilot.Core.Models;
+
 namespace RDAT.Copilot.Core.Interfaces;
 
 /// <summary>
@@ -15,26 +17,3 @@ public interface IDocxImportService
         IProgress<(double Progress, string Text)>? progress = null,
         CancellationToken cancellationToken = default);
 }
-
-/// <summary>
-/// Result of a .docx import operation.
-/// </summary>
-public record DocxImportResult(
-    string FilePath,
-    string FileName,
-    int TotalParagraphs,
-    IReadOnlyList<DocxSegment> Segments,
-    string? Error = null
-);
-
-/// <summary>
-/// A single segment from a .docx document (typically one paragraph).
-/// </summary>
-public record DocxSegment(
-    int Index,
-    string Text,
-    string Style,
-    bool IsEmpty,
-    int StartLineNumber,
-    int EndLineNumber
-);

@@ -1,6 +1,6 @@
-namespace RDAT.Copilot.Core.Interfaces;
-
 using RDAT.Copilot.Core.Models;
+
+namespace RDAT.Copilot.Core.Interfaces;
 
 /// <summary>
 /// Contract for the Ghost Text Coordinator (Phase 3).
@@ -30,7 +30,7 @@ public interface IGhostTextCoordinator
     /// <summary>
     /// Stop the coordinator and cancel all pending channel requests.
     /// </summary>
-    Task StopAsync();
+    Task StopAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Notify the coordinator that the target editor cursor has moved.
@@ -38,21 +38,21 @@ public interface IGhostTextCoordinator
     /// </summary>
     /// <param name="lineNumber">1-based line number.</param>
     /// <param name="column">1-based column number.</param>
-    Task OnTargetCursorChangedAsync(int lineNumber, int column);
+    Task OnTargetCursorChangedAsync(int lineNumber, int column, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Notify the coordinator that the target editor text has changed.
     /// Resets channel timers and clears stale suggestions.
     /// </summary>
     /// <param name="fullText">Complete text content of the target editor.</param>
-    Task OnTargetTextChangedAsync(string fullText);
+    Task OnTargetTextChangedAsync(string fullText, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Notify the coordinator that the source editor text has changed.
     /// Triggers Prefetch channel for the next unmodified source sentence.
     /// </summary>
     /// <param name="fullText">Complete text content of the source editor.</param>
-    Task OnSourceTextChangedAsync(string fullText);
+    Task OnSourceTextChangedAsync(string fullText, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Raised when a ghost text suggestion is ready for display.

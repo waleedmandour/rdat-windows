@@ -27,7 +27,8 @@ public interface IRagPipelineService
     Task InitializeAsync(
         string modelPath,
         string dbPath,
-        IProgress<(double Progress, string Text)>? progress = null);
+        IProgress<(double Progress, string Text)>? progress = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Search for translation memory matches for the given source text.
@@ -40,7 +41,8 @@ public interface IRagPipelineService
     Task<IReadOnlyList<TmSearchResult>> SearchTmAsync(
         string sourceText,
         int topK = 5,
-        double minimumScore = 0.5);
+        double minimumScore = 0.5,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Import a Translation Memory file: parse + embed + index.
@@ -67,12 +69,12 @@ public interface IRagPipelineService
     /// </summary>
     /// <param name="sourceText">Source sentence text.</param>
     /// <returns>Best match, or null if no good match found.</returns>
-    Task<TmSearchResult?> GetBestMatchAsync(string sourceText);
+    Task<TmSearchResult?> GetBestMatchAsync(string sourceText, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get statistics about the loaded Translation Memory.
     /// </summary>
-    Task<TmStats> GetStatsAsync();
+    Task<TmStats> GetStatsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Unload the embedding model and close the vector database.

@@ -18,11 +18,9 @@ public class NavigationService
         get => _frame;
         set
         {
+            if (_frame is not null) _frame.Navigated -= OnNavigated;
             _frame = value;
-            if (_frame is not null)
-            {
-                _frame.Navigated += OnNavigated;
-            }
+            if (_frame is not null) _frame.Navigated += OnNavigated;
         }
     }
 

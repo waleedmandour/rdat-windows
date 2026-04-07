@@ -26,14 +26,14 @@ public sealed class RagPipelineService : IRagPipelineService, IDisposable
     private readonly ITmImportService _importService;
     private readonly ILogger<RagPipelineService> _logger;
 
-    private bool _initialized;
+    private int _initialized;
     private string? _dbPath;
 
     public RagState State { get; private set; } = RagState.Idle;
 
     public long TotalTmCount { get; private set; }
 
-    public bool IsReady => _initialized && _embeddingService.IsReady && _vectorDb.IsReady;
+    public bool IsReady => Volatile.Read(ref _initialized) != 0 && _embeddingService.IsReady && _vectorDb.IsReady;
 
     public RagPipelineService(
         IEmbeddingService embeddingService,
@@ -51,9 +51,10 @@ public sealed class RagPipelineService : IRagPipelineService, IDisposable
     public async Task InitializeAsync(
         string modelPath,
         string dbPath,
-        IProgress<(double Progress, string Text)>? progress = null)
+        IProgress<(double Progress, string Text)>? progress = null,
+        CancellationToken cancellationToken = default)
     {
-        if (_initialized) return;
+        if (Volatile.Read(ref _initialized) != 0) return;
 
         _dbPath = dbPath;
         State = RagState.LoadingModel;
@@ -64,7 +65,7 @@ public sealed class RagPipelineService : IRagPipelineService, IDisposable
             progress?.Report((0.0, "Loading embedding model..."));
             _logger.LogInformation("[RAG] Initializing embedding model from: {Path}", modelPath);
 
-            await _embeddingService.InitializeAsync(modelPath, progress).ConfigureAwait(false);
+            await _embeddingService.InitializeAsync(modelPath, progress, cancellationToken).ConfigureAwait(false);
             progress?.Report((0.4, "Embedding model loaded."));
 
             // Step 2: Open vector database
@@ -72,14 +73,14 @@ public sealed class RagPipelineService : IRagPipelineService, IDisposable
             progress?.Report((0.5, "Opening vector database..."));
             _logger.LogInformation("[RAG] Opening vector database at: {Path}", dbPath);
 
-            await _vectorDb.OpenAsync(dbPath).ConfigureAwait(false);
+            await _vectorDb.OpenAsync(dbPath, cancellationToken).ConfigureAwait(false);
             progress?.Report((0.7, "Vector database opened."));
 
             // Step 3: Check if TM table exists and get count
-            TotalTmCount = await _vectorDb.CountAsync().ConfigureAwait(false);
+            TotalTmCount = await _vectorDb.CountAsync(cancellationToken).ConfigureAwait(false);
             progress?.Report((0.9, $"TM database ready: {TotalTmCount:N0} entries."));
 
-            _initialized = true;
+            Volatile.Write(ref _initialized, 1);
             State = RagState.Ready;
 
             _logger.LogInformation(
@@ -99,9 +100,10 @@ public sealed class RagPipelineService : IRagPipelineService, IDisposable
     public async Task<IReadOnlyList<TmSearchResult>> SearchTmAsync(
         string sourceText,
         int topK = 5,
-        double minimumScore = 0.5)
+        double minimumScore = 0.5,
+        CancellationToken cancellationToken = default)
     {
-        if (!_initialized)
+        if (Volatile.Read(ref _initialized) == 0)
             throw new InvalidOperationException("RAG pipeline is not initialized.");
 
         if (string.IsNullOrWhiteSpace(sourceText))
@@ -113,10 +115,10 @@ public sealed class RagPipelineService : IRagPipelineService, IDisposable
         try
         {
             // Step 1: Generate embedding for query
-            var queryEmbedding = await _embeddingService.EmbedAsync(sourceText).ConfigureAwait(false);
+            var queryEmbedding = await _embeddingService.EmbedAsync(sourceText, cancellationToken).ConfigureAwait(false);
 
             // Step 2: Search vector database
-            var rawResults = await _vectorDb.SearchAsync(queryEmbedding, topK).ConfigureAwait(false);
+            var rawResults = await _vectorDb.SearchAsync(queryEmbedding, topK, cancellationToken).ConfigureAwait(false);
 
             // Step 3: Filter by minimum score and convert to TmSearchResult
             var results = rawResults
@@ -153,11 +155,11 @@ public sealed class RagPipelineService : IRagPipelineService, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<TmSearchResult?> GetBestMatchAsync(string sourceText)
+    public async Task<TmSearchResult?> GetBestMatchAsync(string sourceText, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(sourceText)) return null;
 
-        var results = await SearchTmAsync(sourceText, topK: 1, minimumScore: 0.7).ConfigureAwait(false);
+        var results = await SearchTmAsync(sourceText, topK: 1, minimumScore: 0.7, cancellationToken: cancellationToken).ConfigureAwait(false);
         return results.FirstOrDefault();
     }
 
@@ -287,9 +289,9 @@ public sealed class RagPipelineService : IRagPipelineService, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<TmStats> GetStatsAsync()
+    public async Task<TmStats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
-        var count = await _vectorDb.CountAsync().ConfigureAwait(false);
+        var count = await _vectorDb.CountAsync(cancellationToken).ConfigureAwait(false);
         var dbSizeMb = _dbPath is not null
             ? await GetDbSizeMbAsync(_dbPath).ConfigureAwait(false)
             : 0;
@@ -311,7 +313,7 @@ public sealed class RagPipelineService : IRagPipelineService, IDisposable
     {
         _logger.LogInformation("[RAG] Shutting down pipeline...");
         await _vectorDb.CloseAsync().ConfigureAwait(false);
-        _initialized = false;
+        Volatile.Write(ref _initialized, 0);
         State = RagState.Idle;
         TotalTmCount = 0;
     }

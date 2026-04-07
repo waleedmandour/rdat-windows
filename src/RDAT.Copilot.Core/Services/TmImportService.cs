@@ -1,6 +1,7 @@
 using System.Xml.Linq;
 using CsvHelper;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
 using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;
 
@@ -13,6 +14,13 @@ namespace RDAT.Copilot.Core.Services;
 /// </summary>
 public sealed class TmImportService : ITmImportService
 {
+    private readonly ILogger<TmImportService>? _logger;
+
+    public TmImportService(ILogger<TmImportService>? logger = null)
+    {
+        _logger = logger;
+    }
+
     /// <inheritdoc/>
     public TmImportFormat DetectFormat(string filePath)
     {
@@ -36,6 +44,8 @@ public sealed class TmImportService : ITmImportService
         string? domain = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(filePath);
+
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"TM file not found: {filePath}", filePath);
 
@@ -51,12 +61,15 @@ public sealed class TmImportService : ITmImportService
     }
 
     /// <inheritdoc/>
-    public async Task<int> EstimateCountAsync(string filePath)
+    public async Task<int> EstimateCountAsync(string filePath, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(filePath);
+
         if (!File.Exists(filePath)) return 0;
 
         return await Task.Run(() =>
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var format = DetectFormat(filePath);
 
             return format switch

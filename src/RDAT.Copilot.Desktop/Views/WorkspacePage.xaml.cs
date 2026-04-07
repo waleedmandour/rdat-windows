@@ -23,7 +23,7 @@ namespace RDAT.Copilot.Desktop.Views;
 /// </summary>
 public sealed partial class WorkspacePage : Page
 {
-    private readonly WebViewBridgeService _bridgeService;
+    private readonly IWebViewBridge _bridgeService;
     private readonly WorkspaceViewModel _viewModel;
     private readonly TmPanelViewModel _tmPanelViewModel;
     private readonly IGhostTextCoordinator? _coordinator;
@@ -45,7 +45,7 @@ public sealed partial class WorkspacePage : Page
     {
         this.InitializeComponent();
 
-        _bridgeService = App.Services.GetRequiredService<WebViewBridgeService>();
+        _bridgeService = App.Services.GetRequiredService<IWebViewBridge>();
         _viewModel = App.Services.GetRequiredService<WorkspaceViewModel>();
         _tmPanelViewModel = App.Services.GetRequiredService<TmPanelViewModel>();
         _coordinator = App.Services.GetService<IGhostTextCoordinator>();
