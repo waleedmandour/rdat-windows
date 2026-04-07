@@ -15,6 +15,7 @@ namespace RDAT.Copilot.Desktop.ViewModels;
 /// Phase 2: Integrates RAG pipeline for TM-based ghost text (GTR channel).
 /// Phase 3: Integrates LLM queue engine for Burst/Pause/Prefetch channels.
 /// Phase 4: Integrates grammar checker, AMTA linter, and Gemini cloud service.
+/// Phase 5: Integrates .docx document import and multi-window support.
 /// </summary>
 public partial class WorkspaceViewModel : ObservableObject
 {
@@ -26,6 +27,7 @@ public partial class WorkspaceViewModel : ObservableObject
     private readonly IGrammarCheckerService? _grammarChecker;
     private readonly IAmtaLinterService? _amtaLinter;
     private readonly IGeminiCloudService? _geminiService;
+    private readonly IDocxImportService? _docxImportService;
 
     [ObservableProperty]
     private LanguageDirection _languageDirection = LanguageDirection.EnToAr;
@@ -113,6 +115,23 @@ public partial class WorkspaceViewModel : ObservableObject
     [ObservableProperty]
     private string _llmModelName = string.Empty;
 
+    // ─── Phase 5: Document Import State ─────────────────────────
+
+    [ObservableProperty]
+    private string _documentFileName = "No document loaded";
+
+    [ObservableProperty]
+    private bool _isDocumentLoaded;
+
+    [ObservableProperty]
+    private int _totalSegments;
+
+    [ObservableProperty]
+    private bool _isImportingDocument;
+
+    [ObservableProperty]
+    private string _importProgressText = string.Empty;
+
     // ─── Phase 4: Quality Estimation ─────────────────────────────
 
     [ObservableProperty]
@@ -152,6 +171,7 @@ public partial class WorkspaceViewModel : ObservableObject
         IGrammarCheckerService? grammarChecker,
         IAmtaLinterService? amtaLinter,
         IGeminiCloudService? geminiService,
+        IDocxImportService? docxImportService,
         ILogger<WorkspaceViewModel> logger)
     {
         _sourceEditor = sourceEditor;
@@ -163,6 +183,7 @@ public partial class WorkspaceViewModel : ObservableObject
         _grammarChecker = grammarChecker;
         _amtaLinter = amtaLinter;
         _geminiService = geminiService;
+        _docxImportService = docxImportService;
         _logger = logger;
 
         // Set default source text
@@ -172,7 +193,7 @@ public partial class WorkspaceViewModel : ObservableObject
             The Great Pyramid was built as a tomb for the Fourth Dynasty pharaoh Khufu, also known by his Greek name Cheops. Construction of the pyramid is thought to have taken approximately twenty years, employing a workforce of around 100,000 skilled laborers and craftsmen.
             """;
 
-        _logger.LogInformation("[RDAT] WorkspaceViewModel initialized (EN→AR) — Phase 4");
+        _logger.LogInformation("[RDAT] WorkspaceViewModel initialized (EN→AR) — Phase 5");
 
         // Subscribe to RAG pipeline state changes
         if (_ragPipeline is not null)
@@ -580,6 +601,89 @@ public partial class WorkspaceViewModel : ObservableObject
             UpdateAmtaState();
             _logger.LogError(ex, "[RDAT] AMTA glossary load failed");
         }
+    }
+
+    /// <summary>
+    /// Opens a file picker to import a .docx document.
+    /// Extracts all paragraphs and populates the source editor with the text.
+    /// </summary>
+    [RelayCommand]
+    private async Task ImportDocumentAsync(string? filePath = null)
+    {
+        if (_docxImportService is null)
+        {
+            _logger.LogWarning("[RDAT] DocxImportService not available");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            _logger.LogWarning("[RDAT] No file path provided for document import");
+            return;
+        }
+
+        IsImportingDocument = true;
+        ImportProgressText = "Importing document...";
+
+        try
+        {
+            var progress = new Progress<(double Progress, string Text)>(p =>
+            {
+                ImportProgressText = p.Text;
+            });
+
+            var result = await _docxImportService.ImportAsync(filePath, progress).ConfigureAwait(true);
+
+            if (result.Error is not null)
+            {
+                ImportProgressText = $"Import failed: {result.Error}";
+                _logger.LogError("[RDAT] Document import failed: {Error}", result.Error);
+                return;
+            }
+
+            // Populate source editor with extracted text (one paragraph per line)
+            var sourceText = string.Join("\n", result.Segments.Select(s => s.Text));
+            SourceText = sourceText;
+            SourceEditor.Text = sourceText;
+
+            // Update document state
+            DocumentFileName = result.FileName;
+            IsDocumentLoaded = true;
+            TotalSegments = result.Segments.Count;
+            ImportProgressText = $"Imported {result.TotalParagraphs} paragraphs ({result.Segments.Count} segments)";
+
+            _logger.LogInformation(
+                "[RDAT] Document imported: {FileName} — {Count} paragraphs, {Segments} segments",
+                result.FileName, result.TotalParagraphs, result.Segments.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            ImportProgressText = "Import cancelled.";
+            _logger.LogInformation("[RDAT] Document import cancelled");
+        }
+        catch (Exception ex)
+        {
+            ImportProgressText = $"Import error: {ex.Message}";
+            _logger.LogError(ex, "[RDAT] Document import error");
+        }
+        finally
+        {
+            IsImportingDocument = false;
+        }
+    }
+
+    /// <summary>
+    /// Closes the currently loaded document and clears document state.
+    /// </summary>
+    [RelayCommand]
+    private void CloseDocument()
+    {
+        DocumentFileName = "No document loaded";
+        IsDocumentLoaded = false;
+        TotalSegments = 0;
+        ImportProgressText = string.Empty;
+
+        _logger.LogInformation("[RDAT] Document closed");
     }
 
     [RelayCommand]

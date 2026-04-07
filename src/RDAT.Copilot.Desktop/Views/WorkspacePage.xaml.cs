@@ -414,6 +414,40 @@ public sealed partial class WorkspacePage : Page
         await _tmPanelViewModel.RefreshStatsAsync();
     }
 
+    // ─── Phase 5: Document Import &amp; Multi-Window Handlers ──────
+
+    private async void ImportDocx_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new Windows.Storage.Pickers.FileOpenPicker();
+
+        var hwnd = WindowNative.GetWindowHandle(
+            App.Services.GetRequiredService<MainWindow>());
+        InitializeWithWindow.Initialize(picker, hwnd);
+
+        picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.List;
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationLocation.DocumentsLibrary;
+        picker.FileTypeFilter.Add(".docx");
+
+        var file = await picker.PickSingleFileAsync();
+        if (file is not null)
+        {
+            await _viewModel.ImportDocumentCommand.ExecuteAsync(file.Path);
+
+            // If import succeeded, update Monaco source editor
+            if (_viewModel.IsDocumentLoaded)
+            {
+                await _bridgeService.SetTextAsync("source", _viewModel.SourceText);
+            }
+        }
+    }
+
+    private void NewWindow_Click(object sender, RoutedEventArgs e)
+    {
+        var mainWindow = App.Services.GetRequiredService<MainWindow>();
+        mainWindow.OpenNewWindow();
+        _logger.LogInformation("[RDAT] New window requested");
+    }
+
     // ─── Navigation ─────────────────────────────────────────────────
 
     private void EditSource_Click(object sender, RoutedEventArgs e)

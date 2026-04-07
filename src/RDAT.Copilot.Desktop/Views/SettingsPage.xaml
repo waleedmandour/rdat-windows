@@ -156,6 +156,78 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Phase 5: Document Import Section -->
+                <Border Background="{StaticResource RDATBgSecondaryBrush}"
+                       BorderBrush="{StaticResource RDATBorderBrush}"
+                       CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="12">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8A5;" FontSize="14" Foreground="#94e2d5"/>
+                            <TextBlock Text="Document Import — استيراد المستندات" FontSize="14"
+                                      Foreground="{StaticResource RDATTextBrush}"
+                                      FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Import .docx documents for paragraph-by-paragraph translation. Each paragraph becomes a separate line in the source editor, enabling segment-level alignment with the target editor."
+                                  FontSize="12" Foreground="{StaticResource RDATTextMutedBrush}"
+                                  TextWrapping="Wrap"/>
+
+                        <!-- Supported Formats -->
+                        <Border Background="{StaticResource RDATBgPrimaryBrush}"
+                               BorderBrush="{StaticResource RDATBorderBrush}"
+                               Padding="12" CornerRadius="4">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Supported Formats" FontSize="11"
+                                          Foreground="{StaticResource RDATTextDimBrush}"
+                                          FontWeight="SemiBold"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Format:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text=".docx (Microsoft Word 2007+)" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Alignment:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="Paragraph-by-paragraph (one paragraph per line)" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Encoding:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="UTF-8 with full Arabic/RTL text support" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Styles:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="Preserves paragraph styles (Heading1, Normal, Quote, etc.)" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Import Behavior Info -->
+                        <Border Background="{StaticResource RDATBgPrimaryBrush}"
+                               BorderBrush="{StaticResource RDATBorderBrush}"
+                               Padding="12" CornerRadius="4">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Import Behavior" FontSize="11"
+                                          Foreground="{StaticResource RDATTextDimBrush}"
+                                          FontWeight="SemiBold"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="•" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                    <TextBlock Text="Empty paragraphs are preserved for alignment fidelity" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="•" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                    <TextBlock Text="Line breaks within paragraphs map to multiple editor lines" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="•" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                    <TextBlock Text="Headings, lists, and other styles are detected and tagged" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="•" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                    <TextBlock Text="Import is cancellable — Ctrl+click the progress indicator to stop" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
                 <!-- Phase 4: Gemini Cloud AI Section -->
                 <Border Background="{StaticResource RDATBgSecondaryBrush}"
                        BorderBrush="{StaticResource RDATBorderBrush}"

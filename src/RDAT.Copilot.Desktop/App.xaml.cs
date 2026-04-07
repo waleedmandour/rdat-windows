@@ -62,6 +62,9 @@ public partial class App : Application
         services.AddSingleton<ICredentialService, CredentialLockerService>();
         services.AddSingleton<IGeminiCloudService, GeminiCloudService>();
 
+        // ─── Core Services (Phase 5: Document Import) ──────────────
+        services.AddSingleton<IDocxImportService, DocxImportService>();
+
         // ─── Desktop Services ───────────────────────────────────────
         services.AddSingleton<WebViewBridgeService>();
         services.AddSingleton<NavigationService>();
