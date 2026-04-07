@@ -65,7 +65,7 @@
 
                 <StackPanel Orientation="Horizontal" Spacing="4">
                     <FontIcon Glyph="&#xE8AB;" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
-                    <TextBlock Text="LLM: Idle" FontSize="11"
+                    <TextBlock x:Name="StatusBarLlm" Text="LLM: Idle" FontSize="11"
                               Foreground="{StaticResource RDATTextMutedBrush}"/>
                 </StackPanel>
 

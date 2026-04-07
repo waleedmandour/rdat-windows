@@ -32,8 +32,8 @@ public partial class App : Application
 
     /// <summary>
     /// Configures all services and ViewModels for dependency injection.
-    /// Registers Core services (embedding, vector DB, RAG pipeline) and
-    /// Desktop ViewModels in the DI container.
+    /// Registers Core services (embedding, vector DB, RAG pipeline, LLM, ghost text)
+    /// and Desktop ViewModels in the DI container.
     /// </summary>
     private static IServiceProvider ConfigureServices()
     {
@@ -50,6 +50,11 @@ public partial class App : Application
         services.AddSingleton<IVectorDatabaseService, LanceVectorDbService>();
         services.AddSingleton<ITmImportService, TmImportService>();
         services.AddSingleton<IRagPipelineService, RagPipelineService>();
+
+        // ─── Core Services (Phase 3: LLM Queue Engine) ──────────────
+        services.AddSingleton<ILocalInferenceService, OnnxLlmInferenceService>();
+        services.AddSingleton<ILlmQueueService, LlmQueueService>();
+        services.AddSingleton<IGhostTextCoordinator, GhostTextCoordinator>();
 
         // ─── Desktop Services ───────────────────────────────────────
         services.AddSingleton<WebViewBridgeService>();

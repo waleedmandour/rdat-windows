@@ -32,6 +32,8 @@ Sultan Qaboos University (جامعة السلطان قابوس)
 | **Local AI** | OnnxRuntimeGenAI DirectML | Gemma 4 (INT4) on NPU/GPU |
 | **Embeddings** | ONNX Runtime 1.21 | paraphrase-multilingual-MiniLM-L12-v2 (384d) |
 | **Vector DB** | LanceDB 0.14 | Disk-backed RAG for 10M+ sentences |
+| **LLM Engine** | ONNX Runtime GenAI 0.6 | Gemma 2B IT INT4 (DirectML GPU/NPU) |
+| **Queue** | System.Threading.Channels | Priority queue with preemption |
 | **CSV Parsing** | CsvHelper 33.0 | TM file import (CSV, TMX, TSV) |
 | **Cloud AI** | HttpClient → Gemini API | BYOK cloud rewriting |
 | **Security** | Windows Credential Locker | Secure API key storage |
@@ -73,7 +75,7 @@ Sultan Qaboos University (جامعة السلطان قابوس)
 |-------|------------|--------|
 | **Phase 1** | WinUI 3 Scaffold + WebView2 Monaco Bridge | ✅ Complete |
 | **Phase 2** | Disk-Backed RAG & Massive Corpora (LanceDB) | ✅ Complete |
-| **Phase 3** | C# LLM Queue Engine (ONNX DirectML) | 🔜 Pending |
+| **Phase 3** | C# LLM Queue Engine (ONNX DirectML) | ✅ Complete |
 | **Phase 4** | AMTA Linter, Grammar Check & Gemini | 🔜 Pending |
 | **Phase 5** | Native OS Integrations (.docx / Multi-window) | 🔜 Pending |
 
@@ -172,6 +174,47 @@ src/
     └── Constants/
         └── AppConstants.cs         # Embedding dims, search limits
 ```
+
+## Phase 3: LLM Queue Engine ✅
+
+### Overview
+
+Phase 3 implements the local LLM inference engine with a priority queue for managed GPU/NPU resource allocation. The system runs Gemma 2B IT INT4 quantized model via ONNX Runtime GenAI with DirectML backend, processing exactly one generation request at a time through a `System.Threading.Channels`-based priority queue.
+
+### Queue Architecture
+
+```
+Editor Event (cursor/text change)
+    ↓
+GhostTextCoordinator (debounce timers)
+    ↓
+Channel Handler → LlmRequest (with priority + CancellationTokenSource)
+    ↓
+LlmQueueService (Channel<LlmRequest> → single consumer loop)
+    ↓                      ↓
+    |               Preemption check:
+    |               if new.Priority > current.Priority → current.Cancel()
+    ↓
+OnnxLlmInferenceService (ONNX Runtime GenAI + DirectML)
+    ↓
+LlmGenerationResult → GhostTextCoordinator → WorkspacePage → Monaco
+```
+
+### Preemption Strategy
+
+| Scenario | Action | Result |
+|----------|--------|--------|
+| Burst while Prefetch running | Cancel Prefetch CTS | DirectML queue freed for Burst |
+| Pause while Burst running | Cancel Burst CTS | DirectML queue freed for Pause |
+| Prefetch while Pause running | Queue behind Pause | No preemption (lower priority) |
+
+### Key Components
+
+- **OnnxLlmInferenceService** — ONNX Runtime GenAI wrapper with DirectML, Gemma chat format, reflection-based API, warm-up
+- **LlmQueueService** — `System.Threading.Channels` single-consumer loop, priority preemption, per-channel statistics
+- **GhostTextCoordinator** — Debounce timers (800ms Burst, 1200ms Pause), prompt builders with RAG augmentation, event routing
+- **LlmRequest / LlmGenerationResult** — Typed request/response models with priority, cancellation, timing
+- **ChannelStats** — Per-channel statistics (total, success, preemptions, errors, average latency)
 
 ## Development
 

@@ -4,19 +4,21 @@ using Microsoft.UI.Xaml.Controls;
 using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Desktop.Services;
 using RDAT.Copilot.Desktop.ViewModels;
+using WinRT.Interop;
 
 namespace RDAT.Copilot.Desktop.Views;
 
 /// <summary>
 /// Settings page for configuring language direction, API keys,
-/// RAG pipeline (Phase 2), and AI model preferences.
-/// Phase 2: Added Translation Memory database and embedding model configuration.
+/// RAG pipeline (Phase 2), and LLM model (Phase 3).
 /// </summary>
 public sealed partial class SettingsPage : Page
 {
     private readonly ILogger<SettingsPage> _logger;
     private readonly SettingsViewModel _viewModel;
     private readonly IRagPipelineService _ragPipeline;
+    private readonly ILocalInferenceService? _inferenceService;
+    private readonly ILlmQueueService? _queueService;
 
     public SettingsPage()
     {
@@ -24,6 +26,8 @@ public sealed partial class SettingsPage : Page
         _logger = App.Services.GetRequiredService<ILogger<SettingsPage>>();
         _viewModel = App.Services.GetRequiredService<SettingsViewModel>();
         _ragPipeline = App.Services.GetRequiredService<IRagPipelineService>();
+        _inferenceService = App.Services.GetService<ILocalInferenceService>();
+        _queueService = App.Services.GetService<ILlmQueueService>();
 
         this.DataContext = _viewModel;
         _logger.LogInformation("[RDAT] SettingsPage loaded");
@@ -33,6 +37,8 @@ public sealed partial class SettingsPage : Page
     /// Exposes the SettingsViewModel for XAML binding.
     /// </summary>
     public SettingsViewModel ViewModel => _viewModel;
+
+    // ─── RAG Pipeline (Phase 2) ──────────────────────────────────────
 
     private async void InitRag_Click(object sender, RoutedEventArgs e)
     {
@@ -73,35 +79,21 @@ public sealed partial class SettingsPage : Page
     private async void BrowseModel_Click(object sender, RoutedEventArgs e)
     {
         var picker = new Windows.Storage.Pickers.FolderPicker();
-
-        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(
-            App.Services.GetRequiredService<MainWindow>());
+        var hwnd = WindowNative.GetWindowHandle(App.Services.GetRequiredService<MainWindow>());
         InitializeWithWindow.Initialize(picker, hwnd);
-
         picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
-
         var folder = await picker.PickSingleFolderAsync();
-        if (folder is not null)
-        {
-            _viewModel.EmbeddingModelPath = folder.Path;
-        }
+        if (folder is not null) _viewModel.EmbeddingModelPath = folder.Path;
     }
 
     private async void BrowseDb_Click(object sender, RoutedEventArgs e)
     {
         var picker = new Windows.Storage.Pickers.FolderPicker();
-
-        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(
-            App.Services.GetRequiredService<MainWindow>());
+        var hwnd = WindowNative.GetWindowHandle(App.Services.GetRequiredService<MainWindow>());
         InitializeWithWindow.Initialize(picker, hwnd);
-
         picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
-
         var folder = await picker.PickSingleFolderAsync();
-        if (folder is not null)
-        {
-            _viewModel.TmDbPath = folder.Path;
-        }
+        if (folder is not null) _viewModel.TmDbPath = folder.Path;
     }
 
     private void UpdateRagStatus()
@@ -109,6 +101,95 @@ public sealed partial class SettingsPage : Page
         _viewModel.RagPipelineState = _ragPipeline.State.ToString();
         _viewModel.TmEntryCount = _ragPipeline.TotalTmCount.ToString("N0");
     }
+
+    // ─── Phase 3: LLM Model ──────────────────────────────────────────
+
+    private async void LoadLlm_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_viewModel.LlmModelPath))
+        {
+            _viewModel.SaveStatus = "Please specify the LLM model path.";
+            return;
+        }
+
+        if (_inferenceService is null)
+        {
+            _viewModel.SaveStatus = "LLM service not available.";
+            return;
+        }
+
+        _viewModel.IsLlmInitializing = true;
+        _viewModel.SaveStatus = "Loading LLM model...";
+
+        try
+        {
+            var progress = new Progress<(double Progress, string Text)>(p =>
+            {
+                _viewModel.SaveStatus = p.Text;
+                _viewModel.LlmEngineState = p.Text;
+            });
+
+            await _inferenceService.InitializeAsync(_viewModel.LlmModelPath, progress);
+            _viewModel.SaveStatus = $"LLM model loaded successfully!";
+            _viewModel.UpdateLlmState();
+
+            // Start the queue
+            if (_queueService is not null)
+            {
+                await _queueService.StartAsync();
+                _viewModel.UpdateLlmState();
+            }
+
+            _logger.LogInformation("[RDAT] LLM model loaded: {Path}", _viewModel.LlmModelPath);
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SaveStatus = $"LLM load failed: {ex.Message}";
+            _viewModel.LlmEngineState = "Error ✗";
+            _logger.LogError(ex, "[RDAT] LLM initialization failed");
+        }
+        finally
+        {
+            _viewModel.IsLlmInitializing = false;
+        }
+    }
+
+    private async void UnloadLlm_Click(object sender, RoutedEventArgs e)
+    {
+        if (_inferenceService is null) return;
+
+        try
+        {
+            // Stop queue first
+            if (_queueService is not null)
+            {
+                await _queueService.StopAsync();
+            }
+
+            await _inferenceService.UnloadAsync();
+            _viewModel.LlmEngineState = "Not Loaded";
+            _viewModel.SaveStatus = "LLM model unloaded.";
+            _viewModel.UpdateLlmState();
+            _logger.LogInformation("[RDAT] LLM model unloaded");
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SaveStatus = $"Unload failed: {ex.Message}";
+            _logger.LogError(ex, "[RDAT] LLM unload failed");
+        }
+    }
+
+    private async void BrowseLlmModel_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        var hwnd = WindowNative.GetWindowHandle(App.Services.GetRequiredService<MainWindow>());
+        InitializeWithWindow.Initialize(picker, hwnd);
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder is not null) _viewModel.LlmModelPath = folder.Path;
+    }
+
+    // ─── Navigation ─────────────────────────────────────────────────
 
     private void Back_Click(object sender, RoutedEventArgs e)
     {

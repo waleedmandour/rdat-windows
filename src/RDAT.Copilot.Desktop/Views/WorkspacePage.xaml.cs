@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using RDAT.Copilot.Core.Interfaces;
+using RDAT.Copilot.Core.Models;
 using RDAT.Copilot.Desktop.Services;
 using RDAT.Copilot.Desktop.ViewModels;
 using WinRT.Interop;
@@ -15,12 +17,14 @@ namespace RDAT.Copilot.Desktop.Views;
 /// Manages the C# <-> JavaScript interop bridge for ghost text,
 /// grammar checking, and editor synchronization.
 /// Phase 2: Added TM (Translation Memory) panel with RAG integration.
+/// Phase 3: Integrated LLM queue engine for Burst/Pause/Prefetch ghost text.
 /// </summary>
 public sealed partial class WorkspacePage : Page
 {
     private readonly WebViewBridgeService _bridgeService;
     private readonly WorkspaceViewModel _viewModel;
     private readonly TmPanelViewModel _tmPanelViewModel;
+    private readonly IGhostTextCoordinator? _coordinator;
     private readonly ILogger<WorkspacePage> _logger;
 
     /// <summary>
@@ -40,6 +44,7 @@ public sealed partial class WorkspacePage : Page
         _bridgeService = App.Services.GetRequiredService<WebViewBridgeService>();
         _viewModel = App.Services.GetRequiredService<WorkspaceViewModel>();
         _tmPanelViewModel = App.Services.GetRequiredService<TmPanelViewModel>();
+        _coordinator = App.Services.GetService<IGhostTextCoordinator>();
         _logger = App.Services.GetRequiredService<ILogger<WorkspacePage>>();
 
         this.DataContext = _viewModel;
@@ -62,6 +67,13 @@ public sealed partial class WorkspacePage : Page
         // Register for messenger events from the bridge
         RegisterMessengerHandlers();
 
+        // Subscribe to ghost text coordinator events (Phase 3)
+        if (_coordinator is not null)
+        {
+            _coordinator.SuggestionReady += OnGhostTextSuggestionReady;
+            _coordinator.ClearSuggestion += OnGhostTextClearSuggestion;
+        }
+
         // Update TM panel state from RAG pipeline
         _tmPanelViewModel.UpdateFromPipelineState();
 
@@ -73,15 +85,23 @@ public sealed partial class WorkspacePage : Page
     {
         // Unregister messenger handlers
         WeakReferenceMessenger.Default.UnregisterAll(this);
+
+        // Unsubscribe from coordinator events
+        if (_coordinator is not null)
+        {
+            _coordinator.SuggestionReady -= OnGhostTextSuggestionReady;
+            _coordinator.ClearSuggestion -= OnGhostTextClearSuggestion;
+        }
     }
 
     /// <summary>
     /// Register messenger handlers for cursor/text events from the WebView2 bridge.
     /// Phase 2: Routes events through the ViewModel for RAG integration.
+    /// Phase 3: Routes events to GhostTextCoordinator for LLM channels.
     /// </summary>
     private void RegisterMessengerHandlers()
     {
-        // Target cursor changes → trigger RAG lookup
+        // Target cursor changes → trigger RAG lookup + LLM ghost text
         WeakReferenceMessenger.Default.Register<TargetCursorChangedMessage>(this, async (r, msg) =>
         {
             _logger.LogDebug("[RDAT] Target cursor: L{Line}:C{Col}", msg.LineNumber, msg.Column);
@@ -90,14 +110,14 @@ public sealed partial class WorkspacePage : Page
             _viewModel.TargetEditor.CursorLine = msg.LineNumber;
             _viewModel.TargetEditor.CursorColumn = msg.Column;
 
-            // Phase 2: Trigger RAG TM lookup for the corresponding source sentence
+            // Phase 2 + Phase 3: Trigger RAG lookup + LLM channels
             await _viewModel.OnTargetCursorChangedAsync(msg.LineNumber, msg.Column);
 
             // Update TM panel best match
             var sourceSentence = _viewModel.SourceEditor.GetSourceSentence(msg.LineNumber);
             await _tmPanelViewModel.UpdateBestMatchAsync(sourceSentence);
 
-            // If we have a RAG match, push it as ghost text to Monaco
+            // Push RAG match as ghost text (if available)
             if (_viewModel.HasRagMatch && !string.IsNullOrEmpty(_viewModel.RagMatchText))
             {
                 await _bridgeService.SetRagSuggestionAsync(
@@ -116,17 +136,85 @@ public sealed partial class WorkspacePage : Page
             _viewModel.OnSourceCursorChanged(msg.LineNumber, msg.Column);
         });
 
-        // Target text changes
-        WeakReferenceMessenger.Default.Register<TargetTextChangedMessage>(this, (r, msg) =>
+        // Target text changes → forward to ViewModel + coordinator
+        WeakReferenceMessenger.Default.Register<TargetTextChangedMessage>(this, async (r, msg) =>
         {
-            _viewModel.TargetText = msg.Text;
+            await _viewModel.OnTargetTextChangedAsync(msg.Text);
         });
 
-        // Source text changes
-        WeakReferenceMessenger.Default.Register<SourceTextChangedMessage>(this, (r, msg) =>
+        // Source text changes → forward to ViewModel + coordinator (prefetch)
+        WeakReferenceMessenger.Default.Register<SourceTextChangedMessage>(this, async (r, msg) =>
         {
-            _viewModel.SourceEditor.Text = msg.Text;
-            _viewModel.SourceText = msg.Text;
+            await _viewModel.OnSourceTextChangedAsync(msg.Text);
+        });
+    }
+
+    // ─── Phase 3: Ghost Text Event Handlers ─────────────────────────
+
+    /// <summary>
+    /// Handle a ghost text suggestion from the coordinator.
+    /// Route it to the appropriate Monaco command based on channel.
+    /// </summary>
+    private async void OnGhostTextSuggestionReady(object? sender, GhostTextSuggestion suggestion)
+    {
+        await DispatcherQueue.EnqueueAsync(async () =>
+        {
+            switch (suggestion.Channel)
+            {
+                case "burst":
+                    await _bridgeService.PostCommandAsync("target", "setBurstSuggestion", new
+                    {
+                        text = suggestion.InsertText,
+                        providerId = suggestion.ProviderId,
+                        label = suggestion.Label
+                    });
+                    break;
+
+                case "pause":
+                    await _bridgeService.PostCommandAsync("target", "setPauseSuggestion", new
+                    {
+                        text = suggestion.InsertText,
+                        providerId = suggestion.ProviderId,
+                        label = suggestion.Label
+                    });
+                    break;
+
+                case "prefetch":
+                    // Prefetch results are cached — don't push immediately
+                    // They'll be used when the cursor reaches that line
+                    _logger.LogDebug("[RDAT] Prefetch cached: \"{Text}\"",
+                        suggestion.InsertText.Length > 30 ? suggestion.InsertText[..30] + "..." : suggestion.InsertText);
+                    break;
+
+                default:
+                    _logger.LogWarning("[RDAT] Unknown suggestion channel: {Channel}", suggestion.Channel);
+                    break;
+            }
+
+            // Trigger inline suggestion display in Monaco
+            await _bridgeService.TriggerInlineSuggestAsync("target");
+        });
+    }
+
+    /// <summary>
+    /// Handle a clear suggestion request from the coordinator.
+    /// </summary>
+    private async void OnGhostTextClearSuggestion(object? sender, string channel)
+    {
+        await DispatcherQueue.EnqueueAsync(async () =>
+        {
+            if (channel == "all" || channel == "burst")
+            {
+                await _bridgeService.PostCommandAsync("target", "setBurstSuggestion", new { text = "" });
+            }
+            if (channel == "all" || channel == "pause")
+            {
+                await _bridgeService.PostCommandAsync("target", "setPauseSuggestion", new { text = "" });
+            }
+            if (channel == "all")
+            {
+                await _bridgeService.ClearRagSuggestionAsync();
+            }
         });
     }
 
@@ -157,10 +245,8 @@ public sealed partial class WorkspacePage : Page
 
     private async void ImportTm_Click(object sender, RoutedEventArgs e)
     {
-        // Open file picker for TM import
         var picker = new Windows.Storage.Pickers.FileOpenPicker();
 
-        // Get the window handle for the picker
         var hwnd = WindowNative.GetWindowHandle(
             App.Services.GetRequiredService<MainWindow>());
         InitializeWithWindow.Initialize(picker, hwnd);

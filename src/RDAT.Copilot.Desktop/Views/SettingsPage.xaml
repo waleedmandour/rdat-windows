@@ -175,16 +175,127 @@
                     </StackPanel>
                 </Border>
 
-                <!-- AI Models Section (Phase 3) -->
+                <!-- Phase 3: AI Models Section (Local LLM) -->
                 <Border Background="{StaticResource RDATBgSecondaryBrush}"
                        BorderBrush="{StaticResource RDATBorderBrush}"
-                       CornerRadius="8" Padding="20" Opacity="0.5">
+                       CornerRadius="8" Padding="20">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="AI Models — نماذج الذكاء الاصطناعي" FontSize="14"
-                                  Foreground="{StaticResource RDATTextBrush}"
-                                  FontWeight="SemiBold"/>
-                        <TextBlock Text="Local inference via Gemma 4 (ONNX DirectML) — Phase 3"
-                                  FontSize="12" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE945;" FontSize="14" Foreground="{StaticResource RDATTealBrush}"/>
+                            <TextBlock Text="AI Models — نماذج الذكاء الاصطناعي" FontSize="14"
+                                      Foreground="{StaticResource RDATTextBrush}"
+                                      FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Configure the local LLM model for ghost text generation. Uses ONNX Runtime GenAI with DirectML for GPU/NPU acceleration. Gemma 2B IT INT4 quantized recommended."
+                                  FontSize="12" Foreground="{StaticResource RDATTextMutedBrush}"
+                                  TextWrapping="Wrap"/>
+
+                        <!-- LLM Model Path -->
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="LLM Model Path" FontSize="12"
+                                      Foreground="{StaticResource RDATTextMutedBrush}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBox x:Name="LlmModelPathBox"
+                                        PlaceholderText="C:\Models\gemma-2b-it-q4f32_1-ONNX"
+                                        Text="{x:Bind ViewModel.LlmModelPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        MinWidth="350"
+                                        Background="{StaticResource RDATBgTertiaryBrush}"/>
+                                <Button Content="&#xE8E5;" Click="BrowseLlmModel_Click"
+                                       ToolTipService.ToolTip="Browse for LLM model folder"
+                                       Padding="8" CornerRadius="4"
+                                       Background="{StaticResource RDATBgTertiaryBrush}"
+                                       BorderBrush="{StaticResource RDATBorderBrush}">
+                                    <FontIcon Glyph="&#xE8DA;" FontSize="12"
+                                             Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="Gemma 2B IT Q4 (ONNX format with DirectML support)"
+                                      FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                        </StackPanel>
+
+                        <!-- Temperature Slider -->
+                        <StackPanel Spacing="6">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock Text="Temperature" FontSize="12"
+                                          Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                <TextBlock Text="{x:Bind ViewModel.TemperatureDisplay, Mode=OneWay}"
+                                          FontSize="12" Foreground="{StaticResource RDATTealBrush}"/>
+                            </StackPanel>
+                            <Slider x:Name="TemperatureSlider"
+                                   Minimum="0.0" Maximum="1.0" StepFrequency="0.05"
+                                   Value="{x:Bind ViewModel.LlmTemperature, Mode=TwoWay}"
+                                   IsEnabled="{x:Bind ViewModel.IsLlmInitializing, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}"/>
+                            <TextBlock Text="Low = precise, High = creative (translation: 0.2-0.4 recommended)"
+                                      FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                        </StackPanel>
+
+                        <!-- LLM Engine Status -->
+                        <Border Background="{StaticResource RDATBgPrimaryBrush}"
+                               BorderBrush="{StaticResource RDATBorderBrush}"
+                               Padding="12" CornerRadius="4">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="LLM Engine Status" FontSize="12"
+                                              Foreground="{StaticResource RDATTextMutedBrush}"
+                                              FontWeight="SemiBold"/>
+                                    <Ellipse Width="6" Height="6">
+                                        <Ellipse.Fill>
+                                            <SolidColorBrush Color="{StaticResource RDATTealPrimary}"/>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="State:" FontSize="11"
+                                              Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="{x:Bind ViewModel.LlmEngineState, Mode=OneWay}"
+                                              FontSize="11"
+                                              Foreground="{StaticResource RDATTextBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="Queue:" FontSize="11"
+                                              Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="{x:Bind ViewModel.QueueStatus, Mode=OneWay}"
+                                              FontSize="11"
+                                              Foreground="{StaticResource RDATTextBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Load/Unload LLM buttons -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Load LLM Model" Click="LoadLlm_Click"
+                                   Style="{StaticResource AccentButtonStyle}"
+                                   Padding="20,8" CornerRadius="4"
+                                   IsEnabled="{x:Bind ViewModel.IsLlmInitializing, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}"/>
+                            <Button Content="Unload" Click="UnloadLlm_Click"
+                                   Background="{StaticResource RDATBgTertiaryBrush}"
+                                   BorderBrush="{StaticResource RDATBorderBrush}"
+                                   Padding="20,8" CornerRadius="4"/>
+                        </StackPanel>
+
+                        <!-- Channel Timings Info -->
+                        <Border Background="{StaticResource RDATBgPrimaryBrush}"
+                               BorderBrush="{StaticResource RDATBorderBrush}"
+                               Padding="12" CornerRadius="4">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Channel Timings" FontSize="11"
+                                          Foreground="{StaticResource RDATTextDimBrush}"
+                                          FontWeight="SemiBold"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Ch5 Burst:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="800ms debounce · 3-5 words · preempt prefetch" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Ch6 Pause:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="1200ms debounce · 5-20 words · preempt all" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Ch3 Prefetch:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="Immediate · 200 tokens · low priority" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Border>
 
