@@ -10,7 +10,8 @@ namespace RDAT.Copilot.Desktop.Views;
 
 /// <summary>
 /// Settings page for configuring language direction, API keys,
-/// RAG pipeline (Phase 2), and LLM model (Phase 3).
+/// RAG pipeline (Phase 2), LLM model (Phase 3), and
+/// Gemini Cloud AI + AMTA Glossary (Phase 4).
 /// </summary>
 public sealed partial class SettingsPage : Page
 {
@@ -19,6 +20,9 @@ public sealed partial class SettingsPage : Page
     private readonly IRagPipelineService _ragPipeline;
     private readonly ILocalInferenceService? _inferenceService;
     private readonly ILlmQueueService? _queueService;
+    private readonly IGeminiCloudService? _geminiService;
+    private readonly IAmtaLinterService? _amtaLinter;
+    private readonly ICredentialService? _credentialService;
 
     public SettingsPage()
     {
@@ -28,6 +32,9 @@ public sealed partial class SettingsPage : Page
         _ragPipeline = App.Services.GetRequiredService<IRagPipelineService>();
         _inferenceService = App.Services.GetService<ILocalInferenceService>();
         _queueService = App.Services.GetService<ILlmQueueService>();
+        _geminiService = App.Services.GetService<IGeminiCloudService>();
+        _amtaLinter = App.Services.GetService<IAmtaLinterService>();
+        _credentialService = App.Services.GetService<ICredentialService>();
 
         this.DataContext = _viewModel;
         _logger.LogInformation("[RDAT] SettingsPage loaded");
@@ -187,6 +194,91 @@ public sealed partial class SettingsPage : Page
         picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
         var folder = await picker.PickSingleFolderAsync();
         if (folder is not null) _viewModel.LlmModelPath = folder.Path;
+    }
+
+    // ─── Phase 4: Gemini Cloud AI ────────────────────────────────────
+
+    private async void SaveGeminiKey_Click(object sender, RoutedEventArgs e)
+    {
+        var key = GeminiApiKeyBox.Password;
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            _viewModel.SaveStatus = "Please enter a valid API key.";
+            return;
+        }
+
+        _viewModel.GeminiApiKey = key;
+        await _viewModel.SaveGeminiApiKeyCommand.ExecuteAsync(null);
+    }
+
+    private async void ValidateGeminiKey_Click(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.ValidateGeminiKeyCommand.ExecuteAsync(null);
+    }
+
+    private async void RemoveGeminiKey_Click(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.RemoveGeminiApiKeyCommand.ExecuteAsync(null);
+        GeminiApiKeyBox.Password = string.Empty;
+    }
+
+    // ─── Phase 4: AMTA Glossary ───────────────────────────────────────
+
+    private async void BrowseGlossary_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new Windows.Storage.Pickers.FileOpenPicker();
+        var hwnd = WindowNative.GetWindowHandle(App.Services.GetRequiredService<MainWindow>());
+        InitializeWithWindow.Initialize(picker, hwnd);
+        picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.List;
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add(".csv");
+        picker.FileTypeFilter.Add(".json");
+        picker.FileTypeFilter.Add(".tsv");
+        picker.FileTypeFilter.Add(".txt");
+        var file = await picker.PickSingleFileAsync();
+        if (file is not null) _viewModel.GlossaryPath = file.Path;
+    }
+
+    private async void LoadGlossary_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_viewModel.GlossaryPath))
+        {
+            _viewModel.SaveStatus = "Please specify a glossary file path.";
+            return;
+        }
+
+        if (_amtaLinter is null)
+        {
+            _viewModel.SaveStatus = "AMTA linter service not available.";
+            return;
+        }
+
+        _viewModel.IsGlossaryLoading = true;
+        _viewModel.SaveStatus = "Loading glossary...";
+
+        try
+        {
+            var progress = new Progress<(double Progress, string Text)>(p =>
+            {
+                _viewModel.SaveStatus = p.Text;
+            });
+
+            var workspaceVm = App.Services.GetRequiredService<WorkspaceViewModel>();
+            await workspaceVm.LoadGlossaryAsync(_viewModel.GlossaryPath, progress);
+            _viewModel.UpdateAmtaState();
+            _viewModel.SaveStatus = $"Glossary loaded: {_amtaLinter.TermCount} terms.";
+            _logger.LogInformation("[RDAT] Glossary loaded: {Count} terms", _amtaLinter.TermCount);
+        }
+        catch (Exception ex)
+        {
+            _viewModel.SaveStatus = $"Glossary load failed: {ex.Message}";
+            _viewModel.UpdateAmtaState();
+            _logger.LogError(ex, "[RDAT] Glossary load failed");
+        }
+        finally
+        {
+            _viewModel.IsGlossaryLoading = false;
+        }
     }
 
     // ─── Navigation ─────────────────────────────────────────────────

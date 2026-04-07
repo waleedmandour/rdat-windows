@@ -151,27 +151,236 @@
                     </StackPanel>
                 </Border>
 
-                <!-- API Keys Section -->
+                <!-- Phase 4: Gemini Cloud AI Section -->
                 <Border Background="{StaticResource RDATBgSecondaryBrush}"
                        BorderBrush="{StaticResource RDATBorderBrush}"
                        CornerRadius="8" Padding="20">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="API Keys — مفاتيح API" FontSize="14"
-                                  Foreground="{StaticResource RDATTextBrush}"
-                                  FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE945;" FontSize="14" Foreground="#a78bfa"/>
+                            <TextBlock Text="Gemini Cloud AI — ذكاء جوجل سحابي" FontSize="14"
+                                      Foreground="{StaticResource RDATTextBrush}"
+                                      FontWeight="SemiBold"/>
+                        </StackPanel>
 
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Google Gemini API Key (BYOK)" FontSize="12"
+                        <TextBlock Text="Connect Google Gemini 2.0 Flash for enhanced grammar checking, quality estimation, and style analysis. Your API key is stored securely in Windows Credential Locker — it never leaves your device."
+                                  FontSize="12" Foreground="{StaticResource RDATTextMutedBrush}"
+                                  TextWrapping="Wrap"/>
+
+                        <!-- API Key Input -->
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Gemini API Key (BYOK)" FontSize="12"
                                       Foreground="{StaticResource RDATTextMutedBrush}"/>
                             <PasswordBox x:Name="GeminiApiKeyBox"
                                         PlaceholderText="Enter your Gemini API key..."
                                         CornerRadius="4"
                                         Background="{StaticResource RDATBgTertiaryBrush}"/>
-                            <TextBlock Text="Key stored securely in Windows Credential Locker."
+                            <TextBlock Text="Get your key from Google AI Studio (aistudio.google.com). Free tier: 15 RPM."
                                       FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
-                            <Button Content="Save" Style="{StaticResource AccentButtonStyle}"
-                                   Padding="20,6" CornerRadius="4"/>
                         </StackPanel>
+
+                        <!-- Gemini Status -->
+                        <Border Background="{StaticResource RDATBgPrimaryBrush}"
+                               BorderBrush="{StaticResource RDATBorderBrush}"
+                               Padding="12" CornerRadius="4">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="Gemini Status" FontSize="12"
+                                              Foreground="{StaticResource RDATTextMutedBrush}"
+                                              FontWeight="SemiBold"/>
+                                    <Ellipse Width="6" Height="6">
+                                        <Ellipse.Fill>
+                                            <SolidColorBrush Color="#a78bfa"/>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="State:" FontSize="11"
+                                              Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="{x:Bind ViewModel.GeminiStateDisplay, Mode=OneWay}"
+                                              FontSize="11"
+                                              Foreground="{StaticResource RDATTextBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Save/Validate/Remove Buttons -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Save &amp; Validate" Click="SaveGeminiKey_Click"
+                                   Style="{StaticResource AccentButtonStyle}"
+                                   Padding="20,8" CornerRadius="4"
+                                   IsEnabled="{x:Bind ViewModel.IsSaving, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}"/>
+                            <Button Content="Validate" Click="ValidateGeminiKey_Click"
+                                   Background="{StaticResource RDATBgTertiaryBrush}"
+                                   BorderBrush="{StaticResource RDATBorderBrush}"
+                                   Padding="20,8" CornerRadius="4"/>
+                            <Button Content="Remove Key" Click="RemoveGeminiKey_Click"
+                                   Background="Transparent"
+                                   BorderBrush="#ef444430"
+                                   Padding="20,8" CornerRadius="4">
+                                <Button.Foreground>
+                                    <SolidColorBrush Color="#ef4444"/>
+                                </Button.Foreground>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Cloud Features Info -->
+                        <Border Background="{StaticResource RDATBgPrimaryBrush}"
+                               BorderBrush="{StaticResource RDATBorderBrush}"
+                               Padding="12" CornerRadius="4">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Cloud Features" FontSize="11"
+                                          Foreground="{StaticResource RDATTextDimBrush}"
+                                          FontWeight="SemiBold"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Grammar:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="Enhanced Arabic morphological analysis" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Quality:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="Score: accuracy, fluency, style, terminology (0-100)" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Rewrite:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="Style normalization and tone adjustment" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Phase 4: AMTA Terminology Glossary Section -->
+                <Border Background="{StaticResource RDATBgSecondaryBrush}"
+                       BorderBrush="{StaticResource RDATBorderBrush}"
+                       CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="12">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8F1;" FontSize="14" Foreground="#818cf8"/>
+                            <TextBlock Text="AMTA Terminology Glossary — قاموس المصطلحات" FontSize="14"
+                                      Foreground="{StaticResource RDATTextBrush}"
+                                      FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Load a terminology glossary to enforce consistent translation of domain-specific terms. The AMTA linter flags missing, inconsistent, or untranslated terms with severity levels."
+                                  FontSize="12" Foreground="{StaticResource RDATTextMutedBrush}"
+                                  TextWrapping="Wrap"/>
+
+                        <!-- Glossary Path -->
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Glossary File Path" FontSize="12"
+                                      Foreground="{StaticResource RDATTextMutedBrush}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBox x:Name="GlossaryPathBox"
+                                        PlaceholderText="C:\Glossaries\legal-terms.csv"
+                                        Text="{x:Bind ViewModel.GlossaryPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        MinWidth="350"
+                                        Background="{StaticResource RDATBgTertiaryBrush}"/>
+                                <Button Content="&#xE8E5;" Click="BrowseGlossary_Click"
+                                       ToolTipService.ToolTip="Browse for glossary file"
+                                       Padding="8" CornerRadius="4"
+                                       Background="{StaticResource RDATBgTertiaryBrush}"
+                                       BorderBrush="{StaticResource RDATBorderBrush}">
+                                    <FontIcon Glyph="&#xE8DA;" FontSize="12"
+                                             Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="Supported: CSV, JSON, TSV — CSV: source_term,target_term,domain,notes"
+                                      FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                        </StackPanel>
+
+                        <!-- AMTA Linter Status -->
+                        <Border Background="{StaticResource RDATBgPrimaryBrush}"
+                               BorderBrush="{StaticResource RDATBorderBrush}"
+                               Padding="12" CornerRadius="4">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="AMTA Linter Status" FontSize="12"
+                                              Foreground="{StaticResource RDATTextMutedBrush}"
+                                              FontWeight="SemiBold"/>
+                                    <Ellipse Width="6" Height="6">
+                                        <Ellipse.Fill>
+                                            <SolidColorBrush Color="#818cf8"/>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="State:" FontSize="11"
+                                              Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="{x:Bind ViewModel.AmtaLinterState, Mode=OneWay}"
+                                              FontSize="11"
+                                              Foreground="{StaticResource RDATTextBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="Terms:" FontSize="11"
+                                              Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="{x:Bind ViewModel.AmtaTermCountDisplay, Mode=OneWay}"
+                                              FontSize="11"
+                                              Foreground="{StaticResource RDATTextBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Load Glossary Button -->
+                        <Button Content="Load Glossary" Click="LoadGlossary_Click"
+                               Style="{StaticResource AccentButtonStyle}"
+                               Padding="20,8" CornerRadius="4"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Phase 4: Grammar/Lint Toggles Section -->
+                <Border Background="{StaticResource RDATBgSecondaryBrush}"
+                       BorderBrush="{StaticResource RDATBorderBrush}"
+                       CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="12">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE946;" FontSize="14" Foreground="{StaticResource RDATTealBrush}"/>
+                            <TextBlock Text="Grammar &amp; Lint — التدقيق النحوي" FontSize="14"
+                                      Foreground="{StaticResource RDATTextBrush}"
+                                      FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Configure grammar checking and terminology linting behavior. Local grammar uses the ONNX LLM; Gemini grammar provides enhanced analysis for complex Arabic morphological issues."
+                                  FontSize="12" Foreground="{StaticResource RDATTextMutedBrush}"
+                                  TextWrapping="Wrap"/>
+
+                        <!-- Toggle: Local Grammar Checker -->
+                        <ToggleSwitch Header="Local Grammar Checker (ONNX LLM)"
+                                     IsOn="{x:Bind ViewModel.IsGrammarEnabled, Mode=TwoWay}"
+                                     OnContent="Enabled" OffContent="Disabled">
+                            <ToggleSwitch.Header>
+                                <TextBlock Text="Local Grammar Checker (ONNX LLM)" FontSize="12"
+                                          Foreground="{StaticResource RDATTextBrush}"/>
+                            </ToggleSwitch.Header>
+                        </ToggleSwitch>
+                        <TextBlock Text="Checks grammar, spelling, punctuation, and style using the local Gemma model. Debounce: 2.5s after typing stops."
+                                  FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"
+                                  Margin="0,-8,0,0"/>
+
+                        <!-- Toggle: AMTA Lint -->
+                        <ToggleSwitch Header="AMTA Terminology Linter"
+                                     IsOn="{x:Bind ViewModel.IsAmtaLintEnabled, Mode=TwoWay}"
+                                     OnContent="Enabled" OffContent="Disabled">
+                            <ToggleSwitch.Header>
+                                <TextBlock Text="AMTA Terminology Linter" FontSize="12"
+                                          Foreground="{StaticResource RDATTextBrush}"/>
+                            </ToggleSwitch.Header>
+                        </ToggleSwitch>
+                        <TextBlock Text="Flags missing, inconsistent, or untranslated terms from the loaded glossary. Debounce: 2s."
+                                  FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"
+                                  Margin="0,-8,0,0"/>
+
+                        <!-- Toggle: Gemini Enhanced Grammar -->
+                        <ToggleSwitch Header="Gemini Enhanced Grammar (Cloud)"
+                                     IsOn="{x:Bind ViewModel.IsGeminiGrammarEnabled, Mode=TwoWay}"
+                                     OnContent="Enabled" OffContent="Disabled">
+                            <ToggleSwitch.Header>
+                                <TextBlock Text="Gemini Enhanced Grammar (Cloud)" FontSize="12"
+                                          Foreground="{StaticResource RDATTextBrush}"/>
+                            </ToggleSwitch.Header>
+                        </ToggleSwitch>
+                        <TextBlock Text="Uses Gemini 2.0 Flash for enhanced Arabic morphology analysis. Requires API key. Runs alongside local checker for comprehensive coverage."
+                                  FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"
+                                  Margin="0,-8,0,0"/>
                     </StackPanel>
                 </Border>
 
@@ -293,6 +502,10 @@
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock Text="Ch3 Prefetch:" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
                                     <TextBlock Text="Immediate · 200 tokens · low priority" FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Ch4 Grammar:" FontSize="10" Foreground="#a78bfa"/>
+                                    <TextBlock Text="2500ms debounce · structured JSON · non-preemptible" FontSize="10" Foreground="#c4b5fd"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>

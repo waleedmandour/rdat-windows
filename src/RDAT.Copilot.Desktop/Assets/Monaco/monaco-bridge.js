@@ -5,6 +5,8 @@
 // It provides the shared communication layer between Monaco Editor and
 // the C# WebView2 host via window.chrome.webview.postMessage().
 // Phase 2: Added RAG (TM match) ghost text channel with priority ordering.
+// Phase 3: Added Pause/Burst ghost text channels.
+// Phase 4: Added grammar markers, AMTA lint highlights, quick-fix actions.
 // =============================================================================
 
 (function () {
@@ -16,6 +18,10 @@
   const BURST_DEBOUNCE_MS = 800;
   const PAUSE_DEBOUNCE_MS = 1200;
 
+  // Marker owners for different check types
+  const GRAMMAR_MARKER_OWNER = "rdat-grammar";
+  const AMTA_MARKER_OWNER = "rdat-amta-lint";
+
   // ─── State ──────────────────────────────────────────────────────────
   let editor = null;
   let monaco = null;
@@ -25,7 +31,7 @@
   let grammarDebounceTimer = null;
 
   // Ghost text state (target only)
-  // Phase 2: Three-priority system:
+  // Phase 2-3: Four-priority system:
   //   Priority 1: ragSuggestion (GTR — verified TM match, score >= 0.7)
   //   Priority 2: pauseSuggestion (LLM pause channel — 5-20 words)
   //   Priority 3: burstSuggestion (LLM burst channel — 3-5 words)
@@ -34,8 +40,9 @@
   let pauseSuggestion = null;
   let burstSuggestion = null;
 
-  // Grammar markers state
-  const GRAMMAR_MARKER_OWNER = "rdat-grammar";
+  // Grammar markers cache (Phase 4)
+  let grammarMarkers = [];
+  let amtaLintMarkers = [];
 
   // ─── Post Message to C# ─────────────────────────────────────────────
   function postEvent(eventType, data) {
@@ -104,6 +111,10 @@
       suggestOnTriggerCharacters: false,
       tabSize: 2,
       insertSpaces: true,
+      // Phase 4: Enable code actions for quick fixes
+      lightbulb: {
+        enabled: !isReadOnly ? "on" : "off",
+      },
     });
 
     // ── Event: Cursor Position Changed ──
@@ -198,6 +209,96 @@
         },
         freeInlineCompletions: () => {}
       });
+
+      // ── Phase 4: Quick Fix Code Action Provider ──
+      monaco.languages.registerCodeActionProvider(config.languageId || "rdat-target", {
+        provideCodeActions: (model, range, context, token) => {
+          const actions = [];
+
+          // Collect grammar fixes that overlap with the current range
+          grammarMarkers.forEach(marker => {
+            if (marker.suggestion && marker.suggestion.trim()) {
+              const markerRange = new monaco.Range(
+                marker.startLineNumber, marker.startColumn,
+                marker.endLineNumber, marker.endColumn
+              );
+              if (markerRange.containsRange(range) || range.containsRange(markerRange)) {
+                actions.push({
+                  title: `✏️ ${marker.message}`,
+                  kind: "quickfix",
+                  edit: {
+                    edits: [{
+                      resource: model.uri,
+                      versionId: model.getVersionId(),
+                      textEdit: {
+                        range: markerRange,
+                        text: marker.suggestion
+                      }
+                    }]
+                  },
+                  isPreferred: true
+                });
+
+                // Notify C# that a fix was accepted
+                actions.push({
+                  title: `📋 Accept: "${marker.suggestion.substring(0, 40)}${marker.suggestion.length > 40 ? '...' : ''}"`,
+                  kind: "quickfix",
+                  command: {
+                    id: "rdat.acceptGrammarFix",
+                    title: "Accept Fix",
+                    arguments: [marker]
+                  }
+                });
+              }
+            }
+          });
+
+          // Collect AMTA lint fixes
+          amtaLintMarkers.forEach(marker => {
+            if (marker.suggestion && marker.suggestion.trim()) {
+              const markerRange = new monaco.Range(
+                marker.startLineNumber, marker.startColumn,
+                marker.endLineNumber, marker.endColumn
+              );
+              if (markerRange.containsRange(range) || range.containsRange(markerRange)) {
+                actions.push({
+                  title: `📖 AMTA: Use "${marker.suggestion}"`,
+                  kind: "quickfix",
+                  edit: {
+                    edits: [{
+                      resource: model.uri,
+                      versionId: model.getVersionId(),
+                      textEdit: {
+                        range: markerRange,
+                        text: marker.suggestion
+                      }
+                    }]
+                  },
+                  isPreferred: true
+                });
+              }
+            }
+          });
+
+          return { actions: actions, dispose: () => {} };
+        }
+      });
+
+      // Register the acceptGrammarFix command
+      editor.addAction({
+        id: "rdat.acceptGrammarFix",
+        label: "Accept Grammar Fix",
+        run: (editor, marker) => {
+          if (marker) {
+            postEvent("grammarFixApplied", {
+              issueId: marker.id || marker.issueId,
+              oldText: marker.original || marker.originalText,
+              newText: marker.suggestion,
+              line: marker.startLineNumber
+            });
+          }
+        }
+      });
     }
 
     console.log("[RDAT-Bridge] Monaco editor initialized:", paneId, "(readOnly:", isReadOnly, ")");
@@ -262,6 +363,105 @@
       }
     },
 
+    // Phase 4: Grammar markers (squiggly underlines with tooltips)
+    setGrammarMarkers: (payload) => {
+      if (!editor || !monaco) return;
+      const model = editor.getModel();
+      if (!model) return;
+
+      // Clear old grammar markers
+      monaco.editor.setModelMarkers(model, GRAMMAR_MARKER_OWNER, []);
+
+      grammarMarkers = payload.markers || [];
+
+      const markers = grammarMarkers.map(m => {
+        // Map error type to Monaco severity
+        let severity = 8; // Error (8) = MarkerSeverity.Error
+        if (m.type === "punctuation" || m.type === "style") severity = 4; // Warning
+        if (m.severity === "info" || m.severity === 2) severity = 2; // Info
+
+        return {
+          startLineNumber: m.startLineNumber || 1,
+          startColumn: m.startColumn || 1,
+          endLineNumber: m.endLineNumber || m.startLineNumber || 1,
+          endColumn: m.endColumn || m.startColumn || 1,
+          message: buildMarkerMessage(m),
+          severity: severity,
+          source: "RDAT Grammar",
+          // Store extra data for quick fix provider
+          id: m.id,
+          issueId: m.id,
+          suggestion: m.suggestion || "",
+          original: m.originalText || m.original || "",
+          originalText: m.originalText || m.original || "",
+          type: m.type
+        };
+      });
+
+      monaco.editor.setModelMarkers(model, GRAMMAR_MARKER_OWNER, markers);
+      console.log("[RDAT-Bridge] Grammar markers applied:", markers.length);
+    },
+
+    // Phase 4: AMTA lint markers (term highlights)
+    setAmtaLintMarkers: (payload) => {
+      if (!editor || !monaco) return;
+      const model = editor.getModel();
+      if (!model) return;
+
+      // Clear old AMTA markers
+      monaco.editor.setModelMarkers(model, AMTA_MARKER_OWNER, []);
+
+      amtaLintMarkers = payload.markers || [];
+
+      const markers = amtaLintMarkers.map(m => {
+        // Map AMTA severity to Monaco severity
+        let severity = 4; // Warning
+        if (m.severity === "error" || m.severity === "Error") severity = 8;
+        if (m.severity === "info" || m.severity === "Info") severity = 2;
+
+        return {
+          startLineNumber: m.startLineNumber || 1,
+          startColumn: m.startColumn || 1,
+          endLineNumber: m.endLineNumber || m.startLineNumber || 1,
+          endColumn: m.endColumn || m.startColumn || 1,
+          message: buildAmtaMessage(m),
+          severity: severity,
+          source: "AMTA Linter",
+          id: m.id,
+          suggestion: m.suggestion || "",
+          original: m.originalText || "",
+          originalText: m.originalText || "",
+          type: m.type
+        };
+      });
+
+      monaco.editor.setModelMarkers(model, AMTA_MARKER_OWNER, markers);
+      console.log("[RDAT-Bridge] AMTA lint markers applied:", markers.length);
+    },
+
+    // Phase 4: Quick fix (apply text replacement at position)
+    applyQuickFix: (payload) => {
+      if (!editor) return;
+      const { lineNumber, startColumn, endColumn, newText } = payload;
+      if (lineNumber && startColumn && endColumn !== undefined && newText) {
+        const range = new monaco.Range(lineNumber, startColumn, lineNumber, endColumn);
+        editor.executeEdits("rdat-quickfix", [{
+          range: range,
+          text: newText
+        }]);
+
+        // Notify C#
+        postEvent("grammarFixApplied", {
+          issueId: payload.issueId || "",
+          oldText: payload.oldText || "",
+          newText: newText,
+          line: lineNumber
+        });
+
+        console.log("[RDAT-Bridge] Quick fix applied at L" + lineNumber);
+      }
+    },
+
     applyMarkers: (payload) => {
       if (!editor || !monaco) return;
       const model = editor.getModel();
@@ -313,6 +513,32 @@
       }
     }
   };
+
+  // ─── Message Builder Helpers ─────────────────────────────────────────
+
+  /// Build a formatted marker message with suggestion
+  function buildMarkerMessage(m) {
+    let msg = `[${m.type || "grammar"}] ${m.message || "Issue detected"}`;
+    if (m.suggestion && m.suggestion.trim()) {
+      msg += `\n\n💡 Suggestion: ${m.suggestion}`;
+    }
+    if (m.originalText || m.original) {
+      msg += `\n📝 Original: "${m.originalText || m.original}"`;
+    }
+    return msg;
+  }
+
+  /// Build a formatted AMTA lint message
+  function buildAmtaMessage(m) {
+    let msg = `[${m.type || "term"}] ${m.message || "Terminology issue"}`;
+    if (m.suggestion && m.suggestion.trim()) {
+      msg += `\n\n📖 Approved term: "${m.suggestion}"`;
+    }
+    if (m.domain) {
+      msg += `\n🏷️ Domain: ${m.domain}`;
+    }
+    return msg;
+  }
 
   // ─── Message Listener (C# → JS) ─────────────────────────────────────
   window.chrome?.webview?.addEventListener("message", (event) => {

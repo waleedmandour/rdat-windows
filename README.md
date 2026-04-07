@@ -76,7 +76,7 @@ Sultan Qaboos University (جامعة السلطان قابوس)
 | **Phase 1** | WinUI 3 Scaffold + WebView2 Monaco Bridge | ✅ Complete |
 | **Phase 2** | Disk-Backed RAG & Massive Corpora (LanceDB) | ✅ Complete |
 | **Phase 3** | C# LLM Queue Engine (ONNX DirectML) | ✅ Complete |
-| **Phase 4** | AMTA Linter, Grammar Check & Gemini | 🔜 Pending |
+| **Phase 4** | AMTA Linter, Grammar Check & Gemini | ✅ Complete |
 | **Phase 5** | Native OS Integrations (.docx / Multi-window) | 🔜 Pending |
 
 ## Phase 1: WebView2 Monaco Bridge ✅
@@ -215,6 +215,100 @@ LlmGenerationResult → GhostTextCoordinator → WorkspacePage → Monaco
 - **GhostTextCoordinator** — Debounce timers (800ms Burst, 1200ms Pause), prompt builders with RAG augmentation, event routing
 - **LlmRequest / LlmGenerationResult** — Typed request/response models with priority, cancellation, timing
 - **ChannelStats** — Per-channel statistics (total, success, preemptions, errors, average latency)
+
+## Phase 4: AMTA Linter, Grammar Checker & Gemini ✅
+
+### Overview
+
+Phase 4 introduces three major capabilities for translation quality assurance: an LLM-powered grammar/spell checker, an AMTA-compliant terminology linter, and BYOK (Bring Your Own Key) integration with Google Gemini 2.0 Flash for enhanced cloud-based analysis.
+
+### Grammar Checker Architecture
+
+```
+Target Text Changed (2.5s debounce)
+    ↓
+GrammarCheckerService → LLM Queue (Priority: Grammar, non-preemptible)
+    ↓
+OnnxLlmInferenceService (Gemma 2B IT INT4)
+    ↓
+Structured JSON Response → Parse → GrammarIssue[]
+    ↓
+Monaco Markers (squiggly underlines) + Quick Fix Actions
+```
+
+The grammar checker detects four types of issues:
+- **Spelling** — Misspelled words in both English and Arabic text
+- **Grammar** — Subject-verb agreement, Arabic dual/plural forms, idafa constructions
+- **Punctuation** — Missing or incorrect punctuation (periods, commas, Arabic-specific marks)
+- **Style** — Register inconsistencies, tone shifts, formal/informal mixing
+
+### AMTA Terminology Linter
+
+The AMTA (Association for Machine Translation in the Americas) linter validates translations against approved terminology glossaries:
+
+| Check Type | Severity | Description |
+|-----------|----------|-------------|
+| Missing Term | Error | Source glossary term not found in translation |
+| Untranslated Term | Warning | Source term appears verbatim (not translated) |
+| Inconsistent Term | Warning | Multiple variants of a target term used |
+| Casing Issue | Info | Proper noun/acronym incorrectly cased |
+
+Supported glossary formats: CSV, JSON, TSV.
+
+### Gemini Cloud Integration
+
+```
+Quality Estimation Request
+    ↓
+GeminiCloudService → HttpClient → Gemini 2.0 Flash API
+    ↓ (responseMimeType: application/json)
+QualityEstimationResult { Overall, Accuracy, Fluency, Style, Terminology }
+    ↓
+Status Bar Display + Detailed Feedback
+```
+
+API keys are stored securely in Windows Credential Locker (with DPAPI fallback for non-Windows).
+
+### Key Components
+
+- **GrammarCheckerService** — LLM-based grammar analysis with structured JSON output parsing and text position mapping
+- **AmtaLinterService** — Terminology glossary loading (CSV/JSON/TSV) with word-boundary-aware term matching and casing detection
+- **GeminiCloudService** — BYOK Gemini 2.0 Flash client with rate limiting, quality estimation, grammar checking, and style rewriting
+- **CredentialLockerService** — Windows PasswordVault wrapper with DPAPI-encrypted fallback for cross-platform support
+- **WorkspacePage** — Error list panel with quick-fix actions, grammar/lint status in tab bar, quality estimation display
+- **SettingsPage** — Gemini API key management, AMTA glossary loading, grammar/lint toggle switches
+
+### Phase 4 File Structure
+
+```
+src/
+├── RDAT.Copilot.Core/
+│   ├── Interfaces/
+│   │   ├── IGrammarCheckerService.cs   # Grammar checker contract
+│   │   ├── IAmtaLinterService.cs       # AMTA linter contract
+│   │   ├── IGeminiCloudService.cs      # Gemini cloud AI contract
+│   │   └── ICredentialService.cs       # Secure credential storage
+│   ├── Services/
+│   │   ├── GrammarCheckerService.cs    # LLM grammar analysis
+│   │   ├── AmtaLinterService.cs        # Terminology validation
+│   │   └── GeminiCloudService.cs       # Gemini API integration
+│   └── Models/
+│       ├── AmtaLinterModels.cs         # GlossaryTerm, AmtaLintIssue, enums
+│       └── GeminiModels.cs             # QualityEstimationResult, GeminiState
+├── RDAT.Copilot.Desktop/
+│   ├── Services/
+│   │   └── CredentialLockerService.cs   # Windows PasswordVault + DPAPI
+│   ├── ViewModels/
+│   │   ├── WorkspaceViewModel.cs        # Grammar/lint state management
+│   │   └── SettingsViewModel.cs         # Gemini key + AMTA glossary + toggles
+│   ├── Views/
+│   │   ├── WorkspacePage.xaml          # Error list panel + quality display
+│   │   ├── WorkspacePage.xaml.cs        # Marker push + quick-fix handlers
+│   │   ├── SettingsPage.xaml           # Gemini + AMTA + toggle settings
+│   │   └── SettingsPage.xaml.cs         # Phase 4 settings handlers
+│   └── Assets/Monaco/
+│       └── monaco-bridge.js            # Grammar/lint markers + quick-fix provider
+```
 
 ## Development
 

@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
@@ -18,6 +19,7 @@ namespace RDAT.Copilot.Desktop.Views;
 /// grammar checking, and editor synchronization.
 /// Phase 2: Added TM (Translation Memory) panel with RAG integration.
 /// Phase 3: Integrated LLM queue engine for Burst/Pause/Prefetch ghost text.
+/// Phase 4: Integrated grammar markers, AMTA lint panel, quality estimation.
 /// </summary>
 public sealed partial class WorkspacePage : Page
 {
@@ -25,6 +27,8 @@ public sealed partial class WorkspacePage : Page
     private readonly WorkspaceViewModel _viewModel;
     private readonly TmPanelViewModel _tmPanelViewModel;
     private readonly IGhostTextCoordinator? _coordinator;
+    private readonly IGrammarCheckerService? _grammarChecker;
+    private readonly IAmtaLinterService? _amtaLinter;
     private readonly ILogger<WorkspacePage> _logger;
 
     /// <summary>
@@ -45,6 +49,8 @@ public sealed partial class WorkspacePage : Page
         _viewModel = App.Services.GetRequiredService<WorkspaceViewModel>();
         _tmPanelViewModel = App.Services.GetRequiredService<TmPanelViewModel>();
         _coordinator = App.Services.GetService<IGhostTextCoordinator>();
+        _grammarChecker = App.Services.GetService<IGrammarCheckerService>();
+        _amtaLinter = App.Services.GetService<IAmtaLinterService>();
         _logger = App.Services.GetRequiredService<ILogger<WorkspacePage>>();
 
         this.DataContext = _viewModel;
@@ -74,6 +80,18 @@ public sealed partial class WorkspacePage : Page
             _coordinator.ClearSuggestion += OnGhostTextClearSuggestion;
         }
 
+        // Phase 4: Subscribe to grammar state changes
+        if (_grammarChecker is not null)
+        {
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        }
+
+        // Phase 4: Subscribe to AMTA lint results
+        if (_amtaLinter is not null)
+        {
+            _amtaLinter.LintCompleted += OnAmtaLintCompleted;
+        }
+
         // Update TM panel state from RAG pipeline
         _tmPanelViewModel.UpdateFromPipelineState();
 
@@ -92,12 +110,24 @@ public sealed partial class WorkspacePage : Page
             _coordinator.SuggestionReady -= OnGhostTextSuggestionReady;
             _coordinator.ClearSuggestion -= OnGhostTextClearSuggestion;
         }
+
+        // Phase 4: Unsubscribe from grammar/lint events
+        if (_grammarChecker is not null)
+        {
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+
+        if (_amtaLinter is not null)
+        {
+            _amtaLinter.LintCompleted -= OnAmtaLintCompleted;
+        }
     }
 
     /// <summary>
     /// Register messenger handlers for cursor/text events from the WebView2 bridge.
     /// Phase 2: Routes events through the ViewModel for RAG integration.
     /// Phase 3: Routes events to GhostTextCoordinator for LLM channels.
+    /// Phase 4: Routes grammar/lint events through ViewModel with debounce.
     /// </summary>
     private void RegisterMessengerHandlers()
     {
@@ -136,7 +166,7 @@ public sealed partial class WorkspacePage : Page
             _viewModel.OnSourceCursorChanged(msg.LineNumber, msg.Column);
         });
 
-        // Target text changes → forward to ViewModel + coordinator
+        // Target text changes → forward to ViewModel + coordinator + grammar/lint
         WeakReferenceMessenger.Default.Register<TargetTextChangedMessage>(this, async (r, msg) =>
         {
             await _viewModel.OnTargetTextChangedAsync(msg.Text);
@@ -181,7 +211,6 @@ public sealed partial class WorkspacePage : Page
 
                 case "prefetch":
                     // Prefetch results are cached — don't push immediately
-                    // They'll be used when the cursor reaches that line
                     _logger.LogDebug("[RDAT] Prefetch cached: \"{Text}\"",
                         suggestion.InsertText.Length > 30 ? suggestion.InsertText[..30] + "..." : suggestion.InsertText);
                     break;
@@ -216,6 +245,120 @@ public sealed partial class WorkspacePage : Page
                 await _bridgeService.ClearRagSuggestionAsync();
             }
         });
+    }
+
+    // ─── Phase 4: Grammar/Lint Event Handlers ────────────────────
+
+    /// <summary>
+    /// Handle ViewModel property changes to push grammar/lint markers to Monaco.
+    /// </summary>
+    private async void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(WorkspaceViewModel.GrammarIssues))
+        {
+            await PushGrammarMarkersAsync();
+        }
+    }
+
+    /// <summary>
+    /// Push grammar issue markers to Monaco editor via WebView2 bridge.
+    /// </summary>
+    private async void PushGrammarMarkersAsync()
+    {
+        await DispatcherQueue.EnqueueAsync(async () =>
+        {
+            var issues = _viewModel.GrammarIssues;
+            if (issues.Count == 0)
+            {
+                await _bridgeService.ClearGrammarMarkersAsync();
+                return;
+            }
+
+            var markers = issues.Select(i => new
+            {
+                id = i.Id,
+                type = i.Type.ToString().ToLowerInvariant(),
+                message = i.Message,
+                suggestion = i.Suggestion,
+                originalText = i.OriginalText,
+                startLineNumber = i.StartLineNumber,
+                endLineNumber = i.EndLineNumber,
+                startColumn = i.StartColumn,
+                endColumn = i.EndColumn
+            }).ToArray();
+
+            await _bridgeService.SetGrammarMarkersAsync(markers!);
+        });
+    }
+
+    /// <summary>
+    /// Handle AMTA lint completion — push markers to Monaco.
+    /// </summary>
+    private async void OnAmtaLintCompleted(object? sender, IReadOnlyList<AmtaLintIssue> issues)
+    {
+        await DispatcherQueue.EnqueueAsync(async () =>
+        {
+            if (issues.Count == 0)
+            {
+                await _bridgeService.ClearAmtaLintMarkersAsync();
+                return;
+            }
+
+            var markers = issues.Select(i => new
+            {
+                id = i.Id,
+                type = i.Type.ToString(),
+                severity = i.Severity.ToString(),
+                message = i.Message,
+                suggestion = i.Suggestion,
+                originalText = i.OriginalText,
+                startLineNumber = i.StartLineNumber,
+                endLineNumber = i.EndLineNumber,
+                startColumn = i.StartColumn,
+                endColumn = i.EndColumn,
+                domain = i.Domain
+            }).ToArray();
+
+            await _bridgeService.SetAmtaLintMarkersAsync(markers!);
+        });
+    }
+
+    /// <summary>
+    /// Accept a grammar suggestion — apply quick fix to Monaco.
+    /// </summary>
+    private async void AcceptGrammarFix_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: GrammarIssue issue })
+        {
+            await _bridgeService.ApplyQuickFixAsync(
+                issue.StartLineNumber,
+                issue.StartColumn,
+                issue.EndColumn,
+                issue.Suggestion);
+        }
+    }
+
+    /// <summary>
+    /// Accept an AMTA lint suggestion — apply quick fix to Monaco.
+    /// </summary>
+    private async void AcceptAmtaFix_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AmtaLintIssue issue })
+        {
+            await _bridgeService.ApplyQuickFixAsync(
+                issue.StartLineNumber,
+                issue.StartColumn,
+                issue.EndColumn,
+                issue.Suggestion);
+        }
+    }
+
+    /// <summary>
+    /// Run Gemini quality estimation.
+    /// </summary>
+    private async void RunQualityCheck_Click(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.RunQualityEstimationAsync();
     }
 
     // ─── TM Panel Event Handlers ────────────────────────────────────

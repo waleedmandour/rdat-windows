@@ -19,6 +19,7 @@ namespace RDAT.Copilot.Desktop.Services;
 ///   - cursorPositionChanged: { lineNumber, column }
 ///   - textChanged: { text }
 ///   - completionAccepted: { text }
+///   - grammarFixApplied: { issueId, oldText, newText, line }
 ///
 /// Commands sent to JS:
 ///   - setText: { text }
@@ -28,6 +29,9 @@ namespace RDAT.Copilot.Desktop.Services;
 ///   - getText: {}
 ///   - setRagSuggestion: { text, score }  (Phase 2: GTR ghost text)
 ///   - clearRagSuggestion: {}
+///   - setGrammarMarkers: { markers[] }    (Phase 4: Grammar error markers)
+///   - clearGrammarMarkers: {}             (Phase 4: Clear grammar markers)
+///   - applyQuickFix: { line, startCol, endCol, newText } (Phase 4: Quick fix)
 /// </summary>
 public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
 {
@@ -67,6 +71,7 @@ public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
     /// Handles incoming messages from JavaScript (JS → C#).
     /// Dispatches typed events to the appropriate handler.
     /// Phase 2: Dispatches cursor/text events to WorkspaceViewModel via WeakReferenceMessenger.
+    /// Phase 4: Dispatches grammar fix applied events.
     /// </summary>
     private void HandleWebMessage(string paneId, string? messageJson)
     {
@@ -104,6 +109,7 @@ public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
     /// <summary>
     /// Dispatches a typed event from JS to the appropriate handler.
     /// Phase 2: Forwards cursor/text events to the WorkspaceViewModel.
+    /// Phase 4: Forwards grammar fix applied events.
     /// </summary>
     private void HandleEvent(string paneId, string eventType, JsonNode? data)
     {
@@ -143,6 +149,17 @@ public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
             case "completionAccepted":
                 var acceptedText = data?["text"]?.GetValue<string>() ?? string.Empty;
                 _logger.LogInformation("[RDAT-Bridge] Completion accepted ({PaneId}): {Length} chars", paneId, acceptedText.Length);
+                break;
+
+            // Phase 4: Grammar quick fix applied
+            case "grammarFixApplied":
+                var issueId = data?["issueId"]?.GetValue<string>() ?? string.Empty;
+                var oldText = data?["oldText"]?.GetValue<string>() ?? string.Empty;
+                var newText = data?["newText"]?.GetValue<string>() ?? string.Empty;
+                var fixLine = data?["line"]?.GetValue<int>() ?? 0;
+                _logger.LogInformation(
+                    "[RDAT-Bridge] Grammar fix applied: {IssueId} — \"{Old}\" → \"{New}\" at L{Line}",
+                    issueId, oldText, newText, fixLine);
                 break;
 
             default:
@@ -271,6 +288,70 @@ public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
     public async Task HighlightSourceLineAsync(int lineNumber)
     {
         await PostCommandAsync("source", "highlightLine", new { lineNumber });
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Phase 4: Grammar Checker Commands
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Send grammar error markers to the target editor.
+    /// Each marker appears as a squiggly underline with a hover tooltip.
+    /// </summary>
+    public async Task SetGrammarMarkersAsync(object[] markers)
+    {
+        await PostCommandAsync("target", "setGrammarMarkers", new { markers });
+        _logger.LogDebug("[RDAT-Bridge] Grammar markers sent: {Count}", markers.Length);
+    }
+
+    /// <summary>
+    /// Clear all grammar markers from the target editor.
+    /// </summary>
+    public async Task ClearGrammarMarkersAsync()
+    {
+        await PostCommandAsync("target", "setGrammarMarkers", new { markers = Array.Empty<object>() });
+        _logger.LogDebug("[RDAT-Bridge] Grammar markers cleared");
+    }
+
+    /// <summary>
+    /// Apply a quick fix to the target editor.
+    /// Replaces the text at the specified position with the corrected text.
+    /// </summary>
+    public async Task ApplyQuickFixAsync(int lineNumber, int startColumn, int endColumn, string newText)
+    {
+        await PostCommandAsync("target", "applyQuickFix", new
+        {
+            lineNumber,
+            startColumn,
+            endColumn,
+            newText
+        });
+        _logger.LogInformation(
+            "[RDAT-Bridge] Quick fix applied: L{Line} C{Start}-{End} → \"{Text}\"",
+            lineNumber, startColumn, endColumn, newText.Length > 30 ? newText[..30] + "..." : newText);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Phase 4: AMTA Lint Commands
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Send AMTA terminology lint markers to the target editor.
+    /// These appear as info/warning decorations with term suggestions.
+    /// </summary>
+    public async Task SetAmtaLintMarkersAsync(object[] markers)
+    {
+        await PostCommandAsync("target", "setAmtaLintMarkers", new { markers });
+        _logger.LogDebug("[RDAT-Bridge] AMTA lint markers sent: {Count}", markers.Length);
+    }
+
+    /// <summary>
+    /// Clear all AMTA lint markers from the target editor.
+    /// </summary>
+    public async Task ClearAmtaLintMarkersAsync()
+    {
+        await PostCommandAsync("target", "setAmtaLintMarkers", new { markers = Array.Empty<object>() });
+        _logger.LogDebug("[RDAT-Bridge] AMTA lint markers cleared");
     }
 }
 

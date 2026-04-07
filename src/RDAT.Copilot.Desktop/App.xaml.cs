@@ -32,8 +32,8 @@ public partial class App : Application
 
     /// <summary>
     /// Configures all services and ViewModels for dependency injection.
-    /// Registers Core services (embedding, vector DB, RAG pipeline, LLM, ghost text)
-    /// and Desktop ViewModels in the DI container.
+    /// Registers Core services (embedding, vector DB, RAG pipeline, LLM, ghost text,
+    /// grammar checker, AMTA linter, Gemini cloud) and Desktop ViewModels in the DI container.
     /// </summary>
     private static IServiceProvider ConfigureServices()
     {
@@ -55,6 +55,12 @@ public partial class App : Application
         services.AddSingleton<ILocalInferenceService, OnnxLlmInferenceService>();
         services.AddSingleton<ILlmQueueService, LlmQueueService>();
         services.AddSingleton<IGhostTextCoordinator, GhostTextCoordinator>();
+
+        // ─── Core Services (Phase 4: Grammar, AMTA, Gemini) ─────────
+        services.AddSingleton<IGrammarCheckerService, GrammarCheckerService>();
+        services.AddSingleton<IAmtaLinterService, AmtaLinterService>();
+        services.AddSingleton<ICredentialService, CredentialLockerService>();
+        services.AddSingleton<IGeminiCloudService, GeminiCloudService>();
 
         // ─── Desktop Services ───────────────────────────────────────
         services.AddSingleton<WebViewBridgeService>();
