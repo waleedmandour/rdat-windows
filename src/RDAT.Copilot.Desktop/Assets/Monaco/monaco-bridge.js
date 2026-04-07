@@ -4,6 +4,7 @@
 // This file is loaded by both editor-source.html and editor-target.html.
 // It provides the shared communication layer between Monaco Editor and
 // the C# WebView2 host via window.chrome.webview.postMessage().
+// Phase 2: Added RAG (TM match) ghost text channel with priority ordering.
 // =============================================================================
 
 (function () {
@@ -24,6 +25,12 @@
   let grammarDebounceTimer = null;
 
   // Ghost text state (target only)
+  // Phase 2: Three-priority system:
+  //   Priority 1: ragSuggestion (GTR — verified TM match, score >= 0.7)
+  //   Priority 2: pauseSuggestion (LLM pause channel — 5-20 words)
+  //   Priority 3: burstSuggestion (LLM burst channel — 3-5 words)
+  let ragSuggestion = null;
+  let ragScore = 0;
   let pauseSuggestion = null;
   let burstSuggestion = null;
 
@@ -124,7 +131,30 @@
           const lineContent = model.getLineContent(position.lineNumber) || "";
           const textBeforeCursor = lineContent.substring(0, position.column - 1);
 
-          // Priority 1: Channel 6 (Pause)
+          // Priority 1: Channel GTR (RAG — verified TM match)
+          if (ragSuggestion && ragSuggestion.trim()) {
+            const normalizedTyped = textBeforeCursor.replace(/\s+/g, " ").trim();
+            const normalizedRag = ragSuggestion.replace(/\s+/g, " ").trim();
+            let insertText = normalizedRag;
+            if (normalizedTyped && normalizedRag.startsWith(normalizedTyped)) {
+              const remainder = normalizedRag.substring(normalizedTyped.length).trim();
+              if (remainder) insertText = remainder;
+              else return { items: [] };
+            }
+            return {
+              items: [{
+                insertText: insertText,
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+                filterText: ragSuggestion,
+                completionInfo: {
+                  providerId: "rdat-gtr",
+                  label: `[GTR ${Math.round(ragScore * 100)}%] TM Match`
+                }
+              }]
+            };
+          }
+
+          // Priority 2: Channel 6 (Pause — LLM continuation)
           if (pauseSuggestion && pauseSuggestion.trim()) {
             const normalizedTyped = textBeforeCursor.replace(/\s+/g, " ").trim();
             const normalizedPause = pauseSuggestion.replace(/\s+/g, " ").trim();
@@ -144,7 +174,7 @@
             };
           }
 
-          // Priority 2: Channel 5 (Burst)
+          // Priority 3: Channel 5 (Burst — LLM autocomplete)
           if (burstSuggestion && burstSuggestion.trim()) {
             const normalizedTyped = textBeforeCursor.replace(/\s+/g, " ").trim();
             const normalizedBurst = burstSuggestion.replace(/\s+/g, " ").trim();
@@ -201,9 +231,24 @@
       }
     },
 
+    // Phase 2: RAG ghost text (highest priority)
+    setRagSuggestion: (payload) => {
+      ragSuggestion = payload.text || null;
+      ragScore = payload.score || 0;
+
+      if (ragSuggestion && editor) {
+        const action = editor.getAction("editor.action.inlineSuggest.trigger");
+        if (action) action.run();
+        console.log("[RDAT-Bridge] RAG suggestion set:", ragScore.toFixed(3), "-", ragSuggestion?.substring(0, 40) + "...");
+      } else {
+        ragSuggestion = null;
+        ragScore = 0;
+      }
+    },
+
     setPauseSuggestion: (payload) => {
       pauseSuggestion = payload.text || null;
-      if (pauseSuggestion && editor) {
+      if (pauseSuggestion && !ragSuggestion && editor) {
         const action = editor.getAction("editor.action.inlineSuggest.trigger");
         if (action) action.run();
       }
@@ -211,7 +256,7 @@
 
     setBurstSuggestion: (payload) => {
       burstSuggestion = payload.text || null;
-      if (burstSuggestion && !pauseSuggestion && editor) {
+      if (burstSuggestion && !ragSuggestion && !pauseSuggestion && editor) {
         const action = editor.getAction("editor.action.inlineSuggest.trigger");
         if (action) action.run();
       }
@@ -246,8 +291,26 @@
 
     highlightLine: (payload) => {
       if (!editor || isReadOnly) return;
-      // Phase 2: Add line highlight decoration
-      console.log("[RDAT-Bridge] Highlight line:", payload.lineNumber);
+      if (payload.lineNumber) {
+        // Phase 2: Add line highlight decoration for TM match source
+        const line = payload.lineNumber;
+        const decorations = editor.deltaDecorations([], [{
+          range: new monaco.Range(line, 1, line, 1),
+          options: {
+            isWholeLine: true,
+            className: "tm-match-highlight",
+            glyphMarginClassName: "tm-match-glyph",
+            glyphMarginHoverMessage: { value: "**TM Match Source**" },
+            overviewRuler: {
+              color: "#2dd4bf40",
+              position: monaco.editor.OverviewRulerLane.Full
+            }
+          }
+        }]);
+        // Reveal line
+        editor.revealLineInCenter(line);
+        console.log("[RDAT-Bridge] TM highlight applied to line:", line);
+      }
     }
   };
 

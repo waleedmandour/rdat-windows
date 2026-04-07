@@ -1,8 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml.Controls;
 using RDAT.Copilot.Desktop.Helpers;
+using RDAT.Copilot.Desktop.ViewModels;
 
 namespace RDAT.Copilot.Desktop.Services;
 
@@ -24,6 +26,8 @@ namespace RDAT.Copilot.Desktop.Services;
 ///   - applyMarkers: { owner, markers[] }
 ///   - clearMarkers: { owner }
 ///   - getText: {}
+///   - setRagSuggestion: { text, score }  (Phase 2: GTR ghost text)
+///   - clearRagSuggestion: {}
 /// </summary>
 public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
 {
@@ -62,6 +66,7 @@ public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
     /// <summary>
     /// Handles incoming messages from JavaScript (JS → C#).
     /// Dispatches typed events to the appropriate handler.
+    /// Phase 2: Dispatches cursor/text events to WorkspaceViewModel via WeakReferenceMessenger.
     /// </summary>
     private void HandleWebMessage(string paneId, string? messageJson)
     {
@@ -98,6 +103,7 @@ public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
 
     /// <summary>
     /// Dispatches a typed event from JS to the appropriate handler.
+    /// Phase 2: Forwards cursor/text events to the WorkspaceViewModel.
     /// </summary>
     private void HandleEvent(string paneId, string eventType, JsonNode? data)
     {
@@ -107,13 +113,31 @@ public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
                 var line = data?["lineNumber"]?.GetValue<int>() ?? 1;
                 var col = data?["column"]?.GetValue<int>() ?? 1;
                 _logger.LogDebug("[RDAT-Bridge] Cursor ({PaneId}): L{Line}:C{Col}", paneId, line, col);
-                // Phase 3: Dispatch to WorkspaceViewModel via IMessenger
+
+                // Phase 2: Forward cursor events to WorkspaceViewModel
+                if (paneId == "target")
+                {
+                    WeakReferenceMessenger.Default.Send(new TargetCursorChangedMessage(line, col));
+                }
+                else if (paneId == "source")
+                {
+                    WeakReferenceMessenger.Default.Send(new SourceCursorChangedMessage(line, col));
+                }
                 break;
 
             case "textChanged":
                 var text = data?["text"]?.GetValue<string>() ?? string.Empty;
                 _logger.LogDebug("[RDAT-Bridge] Text changed ({PaneId}): {Length} chars", paneId, text.Length);
-                // Phase 3: Dispatch to WorkspaceViewModel via IMessenger
+
+                // Phase 2: Forward text events to WorkspaceViewModel
+                if (paneId == "target")
+                {
+                    WeakReferenceMessenger.Default.Send(new TargetTextChangedMessage(text));
+                }
+                else if (paneId == "source")
+                {
+                    WeakReferenceMessenger.Default.Send(new SourceTextChangedMessage(text));
+                }
                 break;
 
             case "completionAccepted":
@@ -210,4 +234,66 @@ public partial class WebViewBridgeService : ObservableObject, IWebViewBridge
 
         return await tcs.Task;
     }
+
+    // ════════════════════════════════════════════════════════════════
+    // Phase 2: RAG Ghost Text Commands
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Send a RAG (TM match) ghost text suggestion to the target editor.
+    /// This appears as an inline completion with priority above burst.
+    /// </summary>
+    public async Task SetRagSuggestionAsync(string text, double score)
+    {
+        await PostCommandAsync("target", "setRagSuggestion", new
+        {
+            text,
+            score = Math.Round(score, 3),
+            providerId = "rdat-gtr",
+            label = $"[GTR {score:P0}] TM Match"
+        });
+
+        _logger.LogDebug("[RDAT-Bridge] RAG suggestion sent: {Score:P0}", score);
+    }
+
+    /// <summary>
+    /// Clear the RAG suggestion from the target editor.
+    /// </summary>
+    public async Task ClearRagSuggestionAsync()
+    {
+        await PostCommandAsync("target", "setRagSuggestion", new { text = "" });
+    }
+
+    /// <summary>
+    /// Highlight a specific line in the source editor.
+    /// Used to show which source sentence a TM match came from.
+    /// </summary>
+    public async Task HighlightSourceLineAsync(int lineNumber)
+    {
+        await PostCommandAsync("source", "highlightLine", new { lineNumber });
+    }
 }
+
+// ════════════════════════════════════════════════════════════════════
+// Phase 2: Messenger Types for WebView → ViewModel communication
+// ════════════════════════════════════════════════════════════════════
+
+/// <summary>
+/// Message sent when the cursor position changes in the target editor.
+/// </summary>
+public record TargetCursorChangedMessage(int LineNumber, int Column);
+
+/// <summary>
+/// Message sent when the cursor position changes in the source editor.
+/// </summary>
+public record SourceCursorChangedMessage(int LineNumber, int Column);
+
+/// <summary>
+/// Message sent when the text content changes in the target editor.
+/// </summary>
+public record TargetTextChangedMessage(string Text);
+
+/// <summary>
+/// Message sent when the text content changes in the source editor.
+/// </summary>
+public record SourceTextChangedMessage(string Text);

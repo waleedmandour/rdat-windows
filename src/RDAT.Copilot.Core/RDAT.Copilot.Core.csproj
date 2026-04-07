@@ -4,4 +4,13 @@
     <RootNamespace>RDAT.Copilot.Core</RootNamespace>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ONNX Runtime for multilingual embedding inference -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" />
+    <!-- LanceDB disk-backed vector database -->
+    <PackageReference Include="LanceDB" Version="0.14.0" />
+    <!-- CSV parsing for TM import -->
+    <PackageReference Include="CsvHelper" Version="33.0.1" />
+  </ItemGroup>
 </Project>

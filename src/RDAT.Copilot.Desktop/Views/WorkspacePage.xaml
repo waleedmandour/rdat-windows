@@ -28,6 +28,19 @@
                     </StackPanel>
                 </Border>
 
+                <!-- TM Panel Tab -->
+                <Border Padding="12,6" CornerRadius="0">
+                    <Button Background="Transparent" BorderThickness="0"
+                            Padding="0" Click="TmPanelTab_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE7C3;" FontSize="12"
+                                     Foreground="{StaticResource RDATTextMutedBrush}"/>
+                            <TextBlock Text="TM Matches" FontSize="12"
+                                      Foreground="{StaticResource RDATTextMutedBrush}"/>
+                        </StackPanel>
+                    </Button>
+                </Border>
+
                 <!-- Settings Tab -->
                 <Border Padding="12,6" CornerRadius="0">
                     <Button Background="Transparent" BorderThickness="0"
@@ -43,103 +56,284 @@
             </StackPanel>
         </Grid>
 
-        <!-- Split-Pane Editor Area -->
+        <!-- Main Content Area -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="38*" MinWidth="200"/>
+                <ColumnDefinition Width="*" MinWidth="400"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="62*" MinWidth="300"/>
+                <ColumnDefinition Width="320" MinWidth="240" x:Name="TmPanelColumn"/>
             </Grid.ColumnDefinitions>
 
-            <!-- SOURCE Pane -->
+            <!-- Split-Pane Editor Area -->
             <Grid Grid.Column="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="38*" MinWidth="200"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="62*" MinWidth="300"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- SOURCE Pane -->
+                <Grid Grid.Column="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="28"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Source Pane Header -->
+                    <Border Grid.Row="0" Padding="12,0" Background="{StaticResource RDATTabsBgBrush}"
+                           BorderBrush="{StaticResource RDATBorderBrush}" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Ellipse Width="6" Height="6" Fill="#f59e0b" Opacity="0.7"/>
+                                <TextBlock Text="SOURCE" FontSize="11"
+                                          Foreground="{StaticResource RDATTextMutedBrush}"
+                                          FontWeight="SemiBold"/>
+                                <Border Background="{StaticResource RDATBgTertiaryBrush}"
+                                       BorderBrush="{StaticResource RDATBorderBrush}"
+                                       Padding="6,2" CornerRadius="3">
+                                    <TextBlock Text="English" FontSize="10"
+                                             Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </Border>
+                            </StackPanel>
+
+                            <Button Grid.Column="2" Content="✎" FontSize="11"
+                                   Background="Transparent" BorderThickness="0"
+                                   Padding="4" Click="EditSource_Click"
+                                   ToolTipService.ToolTip="Edit source text">
+                                <Button.Foreground>
+                                    <SolidColorBrush Color="{StaticResource RDATTextDim}"/>
+                                </Button.Foreground>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Source WebView2 (Monaco) -->
+                    <Grid Grid.Row="1">
+                        <WebView2 x:Name="SourceWebView"
+                                 Source="ms-appx:///Assets/Monaco/editor-source.html"
+                                 DefaultBackgroundColor="#1e1e2e"/>
+                    </Grid>
+                </Grid>
+
+                <!-- Resize Handle -->
+                <controls:GridSplitter Grid.Column="1"
+                                       Width="6" HorizontalAlignment="Center"
+                                       Background="Transparent"
+                                       ResizeDirection="Columns"
+                                       CursorBehavior="ChangeOnSplitterHover">
+                    <controls:GridSplitter.RenderTransform>
+                        <TranslateTransform X="-3"/>
+                    </controls:GridSplitter.RenderTransform>
+                </controls:GridSplitter>
+
+                <!-- TARGET Pane -->
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="28"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Target Pane Header -->
+                    <Border Grid.Row="0" Padding="12,0" Background="{StaticResource RDATTabsBgBrush}"
+                           BorderBrush="{StaticResource RDATBorderBrush}" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Ellipse Width="6" Height="6" Fill="{StaticResource RDATTealBrush}"/>
+                                <TextBlock Text="TARGET" FontSize="11"
+                                          Foreground="{StaticResource RDATTextBrush}"
+                                          FontWeight="SemiBold"/>
+                                <Border Background="#0d948820" BorderBrush="#14b8a630"
+                                       Padding="6,2" CornerRadius="3">
+                                    <TextBlock Text="Arabic" FontSize="10"
+                                             Foreground="#5eead4"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- GTR Match Indicator (Phase 2) -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
+                                       Visibility="{x:Bind ViewModel.HasRagMatch, Mode=OneWay}">
+                                <FontIcon Glyph="&#xE945;" FontSize="10" Foreground="{StaticResource RDATTealBrush}"/>
+                                <TextBlock Text="{x:Bind ViewModel.RagDetail, Mode=OneWay}"
+                                          FontSize="10" Foreground="{StaticResource RDATTealBrush}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Target WebView2 (Monaco) -->
+                    <Grid Grid.Row="1">
+                        <WebView2 x:Name="TargetWebView"
+                                 Source="ms-appx:///Assets/Monaco/editor-target.html"
+                                 DefaultBackgroundColor="#1e1e2e"/>
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <!-- TM Panel Resize Handle -->
+            <controls:GridSplitter Grid.Column="1" x:Name="TmPanelSplitter"
+                                   Width="4" HorizontalAlignment="Center"
+                                   Background="Transparent"
+                                   ResizeDirection="Columns"
+                                   CursorBehavior="ChangeOnSplitterHover"
+                                   Visibility="{x:Bind TmPanelViewModel.IsPanelOpen, Mode=OneWay}">
+                <controls:GridSplitter.RenderTransform>
+                    <TranslateTransform X="-2"/>
+                </controls:GridSplitter.RenderTransform>
+            </controls:GridSplitter>
+
+            <!-- Phase 2: TM (Translation Memory) Panel -->
+            <Grid Grid.Column="2" x:Name="TmPanelGrid"
+                  Visibility="{x:Bind TmPanelViewModel.IsPanelOpen, Mode=OneWay}">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="28"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Source Pane Header -->
-                <Border Grid.Row="0" Padding="12,0" Background="{StaticResource RDATTabsBgBrush}"
+                <!-- TM Panel Background -->
+                <Border Grid.RowSpan="5" Background="{StaticResource RDATBgSecondaryBrush}"
+                       BorderBrush="{StaticResource RDATBorderBrush}" BorderThickness="1,0,0,0"/>
+
+                <!-- TM Panel Header -->
+                <Border Grid.Row="0" Padding="12,8"
                        BorderBrush="{StaticResource RDATBorderBrush}" BorderThickness="0,0,0,1">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <Ellipse Width="6" Height="6" Fill="#f59e0b" Opacity="0.7"/>
-                            <TextBlock Text="SOURCE" FontSize="11"
-                                      Foreground="{StaticResource RDATTextMutedBrush}"
+                            <FontIcon Glyph="&#xE7C3;" FontSize="14" Foreground="{StaticResource RDATTealBrush}"/>
+                            <TextBlock Text="Translation Memory" FontSize="12"
+                                      Foreground="{StaticResource RDATTextBrush}"
                                       FontWeight="SemiBold"/>
-                            <Border Background="{StaticResource RDATBgTertiaryBrush}"
-                                   BorderBrush="{StaticResource RDATBorderBrush}"
-                                   Padding="6,2" CornerRadius="3">
-                                <TextBlock Text="English" FontSize="10"
-                                         Foreground="{StaticResource RDATTextMutedBrush}"/>
-                            </Border>
+                            <TextBlock Text="قاعدة الترجمة" FontSize="9"
+                                      Foreground="{StaticResource RDATTextDimBrush}"
+                                      Margin="2,0,0,0"/>
                         </StackPanel>
 
-                        <Button Grid.Column="2" Content="✎" FontSize="11"
-                               Background="Transparent" BorderThickness="0"
-                               Padding="4" Click="EditSource_Click"
-                               ToolTipService.ToolTip="Edit source text">
-                            <Button.Foreground>
-                                <SolidColorBrush Color="{StaticResource RDATTextDim}"/>
-                            </Button.Foreground>
+                        <Button Grid.Column="2" Background="Transparent" BorderThickness="0"
+                               Padding="4" Click="CloseTmPanel_Click"
+                               ToolTipService.ToolTip="Close panel">
+                            <FontIcon Glyph="&#xE711;" FontSize="12"
+                                     Foreground="{StaticResource RDATTextMutedBrush}"/>
                         </Button>
                     </Grid>
                 </Border>
 
-                <!-- Source WebView2 (Monaco) -->
-                <Grid Grid.Row="1">
-                    <WebView2 x:Name="SourceWebView"
-                             Source="ms-appx:///Assets/Monaco/editor-source.html"
-                             DefaultBackgroundColor="#1e1e2e"/>
-                </Grid>
-            </Grid>
-
-            <!-- Resize Handle -->
-            <controls:GridSplitter Grid.Column="1"
-                                   Width="6" HorizontalAlignment="Center"
-                                   Background="Transparent"
-                                   ResizeDirection="Columns"
-                                   CursorBehavior="ChangeOnSplitterHover">
-                <controls:GridSplitter.RenderTransform>
-                    <TranslateTransform X="-3"/>
-                </controls:GridSplitter.RenderTransform>
-            </controls:GridSplitter>
-
-            <!-- TARGET Pane -->
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="28"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- Target Pane Header -->
-                <Border Grid.Row="0" Padding="12,0" Background="{StaticResource RDATTabsBgBrush}"
-                       BorderBrush="{StaticResource RDATBorderBrush}" BorderThickness="0,0,0,1">
-                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <Ellipse Width="6" Height="6" Fill="{StaticResource RDATTealBrush}"/>
-                        <TextBlock Text="TARGET" FontSize="11"
-                                  Foreground="{StaticResource RDATTextBrush}"
-                                  FontWeight="SemiBold"/>
-                        <Border Background="#0d948820" BorderBrush="#14b8a630"
-                               Padding="6,2" CornerRadius="3">
-                            <TextBlock Text="Arabic" FontSize="10"
-                                     Foreground="#5eead4"/>
-                        </Border>
+                <!-- TM Stats -->
+                <Border Grid.Row="1" Padding="12,6" Margin="0">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{x:Bind TmPanelViewModel.StatusMessage, Mode=OneWay}"
+                                      FontSize="11" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="│" FontSize="10" Foreground="{StaticResource RDATBorderBrush}"/>
+                            <TextBlock Text="{x:Bind TmPanelViewModel.RAGStateDisplay, Mode=OneWay}"
+                                      FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- Target WebView2 (Monaco) -->
-                <Grid Grid.Row="1">
-                    <WebView2 x:Name="TargetWebView"
-                             Source="ms-appx:///Assets/Monaco/editor-target.html"
-                             DefaultBackgroundColor="#1e1e2e"/>
-                </Grid>
+                <!-- TM Search Bar -->
+                <Border Grid.Row="2" Padding="8,4">
+                    <AutoSuggestBox x:Name="TmSearchBox"
+                                   PlaceholderText="Search TM..."
+                                   QueryIcon="&#xE721;"
+                                   Text="{x:Bind TmPanelViewModel.SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                   QuerySubmitted="TmSearch_QuerySubmitted"
+                                   KeyDown="TmSearch_KeyDown"/>
+                </Border>
+
+                <!-- TM Search Results -->
+                <ScrollViewer Grid.Row="3" Padding="8,0" VerticalScrollBarVisibility="Auto">
+                    <ListView x:Name="TmResultsList"
+                             ItemsSource="{x:Bind TmPanelViewModel.SearchResults}"
+                             SelectionMode="None">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="8" Margin="0,0,0,4"
+                                       Background="{StaticResource RDATBgTertiaryBrush}"
+                                       BorderBrush="{StaticResource RDATBorderBrush}"
+                                       BorderThickness="1" CornerRadius="4">
+                                    <StackPanel Spacing="4">
+                                        <!-- Source -->
+                                        <TextBlock Text="{Binding Entry.SourceText}"
+                                                  FontSize="11" TextTrimming="CharacterEllipsis"
+                                                  MaxLines="2" Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                        <!-- Arrow -->
+                                        <FontIcon Glyph="&#xE72A;" FontSize="9"
+                                                 Foreground="{StaticResource RDATTextDimBrush}"/>
+                                        <!-- Target -->
+                                        <TextBlock Text="{Binding Entry.TargetText}"
+                                                  FontSize="12" TextTrimming="CharacterEllipsis"
+                                                  MaxLines="3" Foreground="{StaticResource RDATTextBrush}"
+                                                  FontWeight="SemiBold"
+                                                  TextWrapping="Wrap"/>
+                                        <!-- Score -->
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="{Binding Score, Converter={StaticResource ScoreToPercentConverter}}"
+                                                      FontSize="10" Foreground="{StaticResource RDATTealBrush}"/>
+                                            <TextBlock Text="match" FontSize="10"
+                                                      Foreground="{StaticResource RDATTextDimBrush}"/>
+                                            <TextBlock Text="{Binding SearchMs, Converter={StaticResource MsFormatter}}"
+                                                      FontSize="9" Foreground="{StaticResource RDATTextDimBrush}"
+                                                      Margin="8,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </ScrollViewer>
+
+                <!-- TM Import Section -->
+                <Border Grid.Row="4" Padding="8,6"
+                       BorderBrush="{StaticResource RDATBorderBrush}" BorderThickness="0,1,0,0">
+                    <StackPanel Spacing="6">
+                        <!-- Progress bar (visible during import) -->
+                        <ProgressBar x:Name="TmImportProgress"
+                                    Value="{x:Bind TmPanelViewModel.ImportPercent, Mode=OneWay}"
+                                    Visibility="{x:Bind TmPanelViewModel.IsImporting, Mode=OneWay}"
+                                    ShowError="False" ShowPaused="False"/>
+                        <TextBlock Text="{x:Bind TmPanelViewModel.ImportProgress, Mode=OneWay}"
+                                  FontSize="10" Foreground="{StaticResource RDATTextMutedBrush}"
+                                  Visibility="{x:Bind TmPanelViewModel.IsImporting, Mode=OneWay}"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Content="&#xE8E5;" Click="ImportTm_Click"
+                                   ToolTipService.ToolTip="Import TM file (CSV, TMX, TSV)"
+                                   Padding="6" CornerRadius="4"
+                                   IsEnabled="{x:Bind TmPanelViewModel.IsImporting, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}">
+                                <Button.Foreground>
+                                    <SolidColorBrush Color="{StaticResource RDATTextMuted}"/>
+                                </Button.Foreground>
+                            </Button>
+                            <Button Content="&#xE72C;" Click="RefreshTm_Click"
+                                   ToolTipService.ToolTip="Refresh TM stats"
+                                   Padding="6" CornerRadius="4">
+                                <Button.Foreground>
+                                    <SolidColorBrush Color="{StaticResource RDATTextMuted}"/>
+                                </Button.Foreground>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Grid>
     </Grid>

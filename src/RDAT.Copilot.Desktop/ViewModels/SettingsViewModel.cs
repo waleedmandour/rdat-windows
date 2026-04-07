@@ -7,7 +7,8 @@ namespace RDAT.Copilot.Desktop.ViewModels;
 
 /// <summary>
 /// ViewModel for the SettingsPage. Manages language direction,
-/// API keys, and model preferences.
+/// API keys, and RAG pipeline configuration.
+/// Phase 2: Added Translation Memory database and embedding model settings.
 /// Phase 4 will integrate Windows Credential Locker for secure key storage.
 /// </summary>
 public partial class SettingsViewModel : ObservableObject
@@ -32,9 +33,31 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _saveStatus = string.Empty;
 
+    // ─── Phase 2: Translation Memory Settings ───────────────────────
+
+    [ObservableProperty]
+    private string _embeddingModelPath = string.Empty;
+
+    [ObservableProperty]
+    private string _tmDbPath = string.Empty;
+
+    [ObservableProperty]
+    private string _ragPipelineState = "Not Initialized";
+
+    [ObservableProperty]
+    private string _tmEntryCount = "0";
+
+    [ObservableProperty]
+    private string _ragModelStatus = "No model loaded";
+
     public SettingsViewModel(ILogger<SettingsViewModel> logger)
     {
         _logger = logger;
+
+        // Set default paths
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        TmDbPath = Path.Combine(localAppData, "RDAT", "TM", "Database");
+        EmbeddingModelPath = Path.Combine(localAppData, "RDAT", "Models", "multilingual-minilm-l12");
     }
 
     [RelayCommand]

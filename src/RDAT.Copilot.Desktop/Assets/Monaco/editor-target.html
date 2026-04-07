@@ -17,6 +17,19 @@
       background: rgba(45, 212, 191, 0.04);
     }
 
+    /* Phase 2: TM match highlight decoration */
+    .tm-match-highlight {
+      background: rgba(45, 212, 191, 0.08) !important;
+      border-left: 2px solid #2dd4bf !important;
+    }
+    .tm-match-glyph {
+      background: #2dd4bf;
+      border-radius: 50%;
+      margin-left: 3px;
+      width: 4px !important;
+      height: 4px !important;
+    }
+
     /* Custom scrollbar */
     .monaco-scrollable-element > .scrollbar > .slider {
       background: rgba(255, 255, 255, 0.1) !important;
@@ -69,6 +82,8 @@
           "editorSuggestWidget.background": "#252536",
           "editorSuggestWidget.border": "#333346",
           "editorSuggestWidget.selectedBackground": "#2dd4bf20",
+          "editorInlineSuggest.background": "#2dd4bf10",
+          "editorInlineSuggest.foreground": "#8888a8",
         }
       });
 
@@ -83,7 +98,7 @@
         initialText: ""
       });
 
-      console.log("[RDAT-Target] Monaco editor loaded successfully");
+      console.log("[RDAT-Target] Monaco editor loaded successfully (Phase 2: RAG ready)");
     });
   </script>
 </body>

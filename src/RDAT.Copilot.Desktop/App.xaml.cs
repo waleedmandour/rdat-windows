@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
+using RDAT.Copilot.Core.Interfaces;
+using RDAT.Copilot.Core.Services;
 using RDAT.Copilot.Desktop.Services;
 using RDAT.Copilot.Desktop.ViewModels;
 
@@ -30,6 +32,8 @@ public partial class App : Application
 
     /// <summary>
     /// Configures all services and ViewModels for dependency injection.
+    /// Registers Core services (embedding, vector DB, RAG pipeline) and
+    /// Desktop ViewModels in the DI container.
     /// </summary>
     private static IServiceProvider ConfigureServices()
     {
@@ -41,15 +45,22 @@ public partial class App : Application
             builder.AddDebug();
         });
 
-        // Services
+        // ─── Core Services (Phase 2: RAG Pipeline) ──────────────────
+        services.AddSingleton<IEmbeddingService, OnnxEmbeddingService>();
+        services.AddSingleton<IVectorDatabaseService, LanceVectorDbService>();
+        services.AddSingleton<ITmImportService, TmImportService>();
+        services.AddSingleton<IRagPipelineService, RagPipelineService>();
+
+        // ─── Desktop Services ───────────────────────────────────────
         services.AddSingleton<WebViewBridgeService>();
         services.AddSingleton<NavigationService>();
 
-        // ViewModels
+        // ─── ViewModels ─────────────────────────────────────────────
         services.AddTransient<WorkspaceViewModel>();
         services.AddTransient<SourceEditorViewModel>();
         services.AddTransient<TargetEditorViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<TmPanelViewModel>();
 
         return services.BuildServiceProvider();
     }

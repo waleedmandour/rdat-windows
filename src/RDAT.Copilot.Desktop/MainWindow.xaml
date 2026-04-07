@@ -71,9 +71,10 @@
 
                 <TextBlock Text="│" FontSize="11" Foreground="{StaticResource RDATBorderBrush}"/>
 
+                <!-- Phase 2: RAG/GTR Status Indicator -->
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <FontIcon Glyph="&#xE7C3;" FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
-                    <TextBlock Text="GTR: Idle" FontSize="11"
+                    <FontIcon Glyph="&#xE7C3;" FontSize="10" Foreground="{StaticResource RDATTealBrush}"/>
+                    <TextBlock x:Name="StatusBarRag" Text="GTR: Idle" FontSize="11"
                               Foreground="{StaticResource RDATTextMutedBrush}"/>
                 </StackPanel>
 

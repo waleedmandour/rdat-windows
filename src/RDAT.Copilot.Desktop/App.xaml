@@ -26,9 +26,11 @@
             <SolidColorBrush x:Key="RDATTealSecondaryBrush" Color="{StaticResource RDATTealSecondary}" />
             <SolidColorBrush x:Key="RDATBgPrimaryBrush" Color="{StaticResource RDATBgPrimary}" />
             <SolidColorBrush x:Key="RDATBgSecondaryBrush" Color="{StaticResource RDATBgSecondary}" />
+            <SolidColorBrush x:Key="RDATBgTertiaryBrush" Color="{StaticResource RDATBgTertiary}" />
             <SolidColorBrush x:Key="RDATBorderBrush" Color="{StaticResource RDATBorder}" />
             <SolidColorBrush x:Key="RDATTextBrush" Color="{StaticResource RDATText}" />
             <SolidColorBrush x:Key="RDATTextMutedBrush" Color="{StaticResource RDATTextMuted}" />
+            <SolidColorBrush x:Key="RDATTextDimBrush" Color="{StaticResource RDATTextDim}" />
             <SolidColorBrush x:Key="RDATStatusBarBrush" Color="{StaticResource RDATStatusBar}" />
             <SolidColorBrush x:Key="RDATTabsBgBrush" Color="{StaticResource RDATTabBg}" />
 

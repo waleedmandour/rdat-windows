@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
+using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;
 
 namespace RDAT.Copilot.Desktop.ViewModels;
@@ -9,10 +11,12 @@ namespace RDAT.Copilot.Desktop.ViewModels;
 /// Root ViewModel for the WorkspacePage. Orchestrates source and target
 /// editor ViewModels, manages language direction state, and coordinates
 /// the Tri-Channel Ghost Text Architecture from the MVVM layer.
+/// Phase 2: Integrates RAG pipeline for TM-based ghost text (GTR channel).
 /// </summary>
 public partial class WorkspaceViewModel : ObservableObject
 {
     private readonly ILogger<WorkspaceViewModel> _logger;
+    private readonly IRagPipelineService? _ragPipeline;
 
     [ObservableProperty]
     private LanguageDirection _languageDirection = LanguageDirection.EnToAr;
@@ -27,6 +31,9 @@ public partial class WorkspaceViewModel : ObservableObject
     private int _activeTargetLine = 1;
 
     [ObservableProperty]
+    private int _activeSourceLine = 1;
+
+    [ObservableProperty]
     private bool _isLLMReady;
 
     [ObservableProperty]
@@ -34,6 +41,18 @@ public partial class WorkspaceViewModel : ObservableObject
 
     [ObservableProperty]
     private string _ragState = "GTR: Idle";
+
+    [ObservableProperty]
+    private string _ragDetail = string.Empty;
+
+    [ObservableProperty]
+    private bool _hasRagMatch;
+
+    [ObservableProperty]
+    private string _ragMatchText = string.Empty;
+
+    [ObservableProperty]
+    private double _ragMatchScore;
 
     [ObservableProperty]
     private string _grammarState = "Clean";
@@ -53,10 +72,12 @@ public partial class WorkspaceViewModel : ObservableObject
     public WorkspaceViewModel(
         SourceEditorViewModel sourceEditor,
         TargetEditorViewModel targetEditor,
+        IRagPipelineService? ragPipeline,
         ILogger<WorkspaceViewModel> logger)
     {
         _sourceEditor = sourceEditor;
         _targetEditor = targetEditor;
+        _ragPipeline = ragPipeline;
         _logger = logger;
 
         // Set default source text
@@ -67,6 +88,71 @@ public partial class WorkspaceViewModel : ObservableObject
             """;
 
         _logger.LogInformation("[RDAT] WorkspaceViewModel initialized (EN→AR)");
+
+        // Subscribe to RAG pipeline state changes
+        if (_ragPipeline is not null)
+        {
+            UpdateRagState();
+        }
+    }
+
+    /// <summary>
+    /// Update RAG state display from the pipeline.
+    /// </summary>
+    private void UpdateRagState()
+    {
+        if (_ragPipeline is null) return;
+
+        RAGState = $"GTR: {_ragPipeline.State}";
+        HasRagMatch = false;
+
+        _logger.LogInformation("[RDAT] RAG state updated: {State}, TM count: {Count}",
+            _ragPipeline.State, _ragPipeline.TotalTmCount);
+    }
+
+    /// <summary>
+    /// Called when the cursor moves in the target editor.
+    /// Triggers a RAG search for the corresponding source sentence.
+    /// </summary>
+    public async Task OnTargetCursorChangedAsync(int lineNumber, int column)
+    {
+        ActiveTargetLine = lineNumber;
+
+        if (_ragPipeline?.IsReady != true) return;
+
+        // Get the corresponding source sentence for RAG lookup
+        var sourceSentence = SourceEditor.GetSourceSentence(lineNumber);
+        if (string.IsNullOrWhiteSpace(sourceSentence)) return;
+
+        try
+        {
+            var bestMatch = await _ragPipeline.GetBestMatchAsync(sourceSentence).ConfigureAwait(true);
+            if (bestMatch is not null && bestMatch.Score >= 0.7)
+            {
+                HasRagMatch = true;
+                RagMatchText = bestMatch.Entry.TargetText;
+                RagMatchScore = bestMatch.Score;
+                RAGDetail = $"GTR: {bestMatch.Score:P0} match";
+            }
+            else
+            {
+                HasRagMatch = false;
+                RAGDetail = $"GTR: {_ragPipeline.State}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "[RDAT] RAG lookup failed for line {Line}", lineNumber);
+        }
+    }
+
+    /// <summary>
+    /// Called when the cursor moves in the source editor.
+    /// Updates the active source line for RAG context.
+    /// </summary>
+    public void OnSourceCursorChanged(int lineNumber, int column)
+    {
+        ActiveSourceLine = lineNumber;
     }
 
     [RelayCommand]
@@ -88,6 +174,8 @@ public partial class WorkspaceViewModel : ObservableObject
         GrammarErrorCount = 0;
         GrammarWarningCount = 0;
         GrammarState = "Clean";
+        HasRagMatch = false;
+        RagMatchText = string.Empty;
         _logger.LogInformation("[RDAT] Workspace cleared");
     }
 }

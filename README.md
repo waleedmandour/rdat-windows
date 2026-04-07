@@ -30,48 +30,56 @@ Sultan Qaboos University (جامعة السلطان قابوس)
 | **MVVM** | CommunityToolkit.Mvvm 8.4 | ObservableObject, RelayCommand, Ioc.Default |
 | **Editor** | Monaco Editor via WebView2 | BiDi Arabic text, inline completions, markers |
 | **Local AI** | OnnxRuntimeGenAI DirectML | Gemma 4 (INT4) on NPU/GPU |
-| **Embeddings** | OnnxRuntime | paraphrase-multilingual-MiniLM-L12-v2 (384d) |
-| **Vector DB** | LanceDB / SQLite-vec | Disk-backed RAG for 10M+ sentences |
+| **Embeddings** | ONNX Runtime 1.21 | paraphrase-multilingual-MiniLM-L12-v2 (384d) |
+| **Vector DB** | LanceDB 0.14 | Disk-backed RAG for 10M+ sentences |
+| **CSV Parsing** | CsvHelper 33.0 | TM file import (CSV, TMX, TSV) |
 | **Cloud AI** | HttpClient → Gemini API | BYOK cloud rewriting |
 | **Security** | Windows Credential Locker | Secure API key storage |
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────┐
-│                   WinUI 3 Shell                       │
-│  ┌──────────┐  ┌─────────────────┐  ┌──────────────┐ │
-│  │ Title Bar │  │  Split-Pane      │  │  Status Bar  │ │
-│  └──────────┘  │  ┌─────┬───────┐  │  └──────────────┘ │
-│                 │  │ SRC │ TGT   │  │                   │
-│  ┌──────────┐   │  │WebView│WebView│ │                  │
-│  │ Settings │   │  │ 2    │ 2    │ │                  │
-│  │  Dialog  │   │  └─────┴───────┘  │                  │
-│  └──────────┘   │     ↕ JSON Bridge  │                  │
-│                 └────────┬──────────┘                   │
-│  ┌──────────────────────┴──────────────────────────┐  │
-│  │              Service Layer                        │  │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │  │
-│  │  │ LLM Queue│ │ RAG/VEC  │ │ Grammar Checker  │ │  │
-│  │  │ (DirectML)│ │(LanceDB) │ │ (ONNX)          │ │  │
-│  │  └──────────┘ └──────────┘ └──────────────────┘ │  │
-│  └──────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      WinUI 3 Shell                           │
+│  ┌──────────┐  ┌───────────────────┐  ┌──────────────────┐  │
+│  │ Title Bar │  │  Split-Pane        │  │  TM Panel (P2)  │  │
+│  └──────────┘  │  ┌───────┬────────┐│  │  ┌────────────┐ │  │
+│                 │  │  SRC  │  TGT   ││  │  │ Search     │ │  │
+│  ┌──────────┐  │  │WebView│WebView ││  │  │ Results    │ │  │
+│  │ Settings │  │  │  2    │  2     ││  │  │ Import     │ │  │
+│  │  Page    │  │  └───────┴────────┘│  │  │ Stats      │ │  │
+│  └──────────┘  │    ↕ JSON Interop   │  │  └────────────┘ │  │
+│                 └──────────┬──────────┘  └────────┬─────────┘  │
+│  ┌────────────────────────┴───────────────────────┴────────┐  │
+│  │                  Service Layer (MVVM)                    │  │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐ │  │
+│  │  │ LLM Queue│ │ RAG Pipe │ │ Grammar  │ │ TM Import │ │  │
+│  │  │(DirectML)│ │(LanceDB) │ │ Checker  │ │ (TMX/CSV) │ │  │
+│  │  └──────────┘ └──────────┘ └──────────┘ └───────────┘ │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │                 Core Library (Headless)                  │  │
+│  │  ┌────────────┐  ┌────────────┐  ┌──────────────────┐  │  │
+│  │  │  Embedding  │  │  VectorDB  │  │  Domain Models   │  │  │
+│  │  │  (ONNX)    │  │  (LanceDB) │  │  TM/RAG/Lang     │  │  │
+│  │  └────────────┘  └────────────┘  └──────────────────┘  │  │
+│  └────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Phase Plan
 
 | Phase | Description | Status |
 |-------|------------|--------|
-| **Phase 1** | WinUI 3 Scaffold + WebView2 Monaco Bridge | ✅ In Progress |
-| **Phase 2** | Disk-Backed RAG & Massive Corpora (LanceDB) | 🔜 Pending |
+| **Phase 1** | WinUI 3 Scaffold + WebView2 Monaco Bridge | ✅ Complete |
+| **Phase 2** | Disk-Backed RAG & Massive Corpora (LanceDB) | ✅ Complete |
 | **Phase 3** | C# LLM Queue Engine (ONNX DirectML) | 🔜 Pending |
 | **Phase 4** | AMTA Linter, Grammar Check & Gemini | 🔜 Pending |
 | **Phase 5** | Native OS Integrations (.docx / Multi-window) | 🔜 Pending |
 
-## Phase 1: WebView2 Monaco Bridge
+## Phase 1: WebView2 Monaco Bridge ✅
 
-The WinUI 3 shell provides native Windows 11 chrome (Mica material, custom title bar, NavigationView sidebar), while Monaco Editor renders inside WebView2 controls for unmatched text editing capabilities including bidirectional Arabic text, inline completions, and marker overlays.
+The WinUI 3 shell provides native Windows 11 chrome (Mica material, custom title bar), while Monaco Editor renders inside WebView2 controls for unmatched text editing capabilities including bidirectional Arabic text, inline completions, and marker overlays.
 
 **Interop Protocol:**
 
@@ -80,22 +88,89 @@ C# → JS:  CoreWebView2.PostWebMessageAsJson({ type: "command", command: "...",
 JS → C#:  window.chrome.webview.postMessage({ type: "event", event: "...", data: {...} })
 ```
 
+## Phase 2: RAG Pipeline & Translation Memory ✅
+
+### Overview
+
+Phase 2 introduces the Retrieval-Augmented Generation (RAG) pipeline for Translation Memory lookup. The system uses local ONNX Runtime embedding inference and LanceDB vector search to find verified TM matches in real-time (<50ms target) and present them as GTR (Guaranteed Translation Result) ghost text in the target editor.
+
+### RAG Pipeline Flow
+
+```
+Source Sentence
+    ↓
+ONNX Embedding (paraphrase-multilingual-MiniLM-L12-v2)
+    ↓ 384-dim normalized vector
+LanceDB Vector Search (cosine similarity)
+    ↓ top-K results (default: K=5)
+Score Filtering (minimum threshold: 0.5)
+    ↓
+TM Search Results → GTR Ghost Text Channel (score ≥ 0.7)
+    ↓
+Monaco Inline Completion [GTR 92%] TM Match
+```
+
+### Four-Priority Ghost Text Architecture
+
+| Priority | Channel | Trigger | Source | Preemption |
+|----------|---------|---------|--------|------------|
+| 1 | **GTR** (Phase 2) | Source line change | LanceDB TM match (≥70%) | Always visible |
+| 2 | **Pause** (Ch6) | 1.2s typing pause | Local LLM continuation | Preempts GTR if typing |
+| 3 | **Burst** (Ch5) | 0.8s typing pause | Local LLM autocomplete | Preempts GTR if typing |
+| 4 | **Prefetch** (Ch3) | Sentence change | Background LLM | Cancelled by higher priority |
+
+### Supported TM Import Formats
+
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| CSV | `.csv` | Columns: source, target (optional: domain, quality) |
+| TMX 1.4 | `.tmx` | Translation Memory eXchange XML standard |
+| TSV | `.tsv` / `.txt` | Tab-separated: `source\ttarget` per line |
+
+### Key Components
+
+- **OnnxEmbeddingService** — Local ONNX Runtime inference for multilingual embeddings (384 dimensions, L2-normalized for cosine similarity)
+- **LanceVectorDbService** — Disk-backed LanceDB table for persistent vector storage (supports 10M+ entries without RAM pressure)
+- **RagPipelineService** — Orchestrates embed → search → filter pipeline with batch processing for TM import
+- **TmImportService** — Parses TMX 1.4, CSV, and TSV files into TmEntry records
+- **TmPanelViewModel** — MVVM control for the TM sidebar panel (search, import, browse)
+- **WeakReferenceMessenger** — Decoupled JS→ViewModel event dispatch via CommunityToolkit.Mvvm
+
 ### Project Structure
 
 ```
 src/
 ├── RDAT.Copilot.Desktop/          # WinUI 3 app (Views, ViewModels, Services)
-│   ├── Views/                     # XAML pages
-│   ├── ViewModels/                # MVVM state management
-│   ├── Services/                  # WebView2 bridge, navigation
-│   ├── Helpers/                   # JSON serialization utilities
-│   ├── Converters/                # XAML value converters
-│   ├── Models/                    # Bridge message records
-│   └── Assets/Monaco/             # HTML + JS bridge files
+│   ├── Views/
+│   │   ├── WorkspacePage.xaml     # Split-pane editors + TM panel
+│   │   └── SettingsPage.xaml      # Config + RAG pipeline initialization
+│   ├── ViewModels/
+│   │   ├── WorkspaceViewModel.cs  # RAG state tracking, GTR channel
+│   │   ├── TmPanelViewModel.cs    # TM search/import/browse
+│   │   └── SettingsViewModel.cs   # Model path, DB path config
+│   ├── Services/
+│   │   └── WebViewBridgeService.cs # RAG ghost text commands + messenger
+│   └── Assets/Monaco/
+│       └── monaco-bridge.js       # GTR priority channel in inline provider
 └── RDAT.Copilot.Core/             # Headless service layer (testable)
-    ├── Constants/                 # Shared configuration
-    ├── Models/                    # Domain models
-    └── Interfaces/                # Service contracts (Phase 2-5)
+    ├── Services/
+    │   ├── OnnxEmbeddingService.cs # ONNX multilingual embedding
+    │   ├── LanceVectorDbService.cs # LanceDB vector operations
+    │   ├── RagPipelineService.cs   # End-to-end RAG orchestration
+    │   └── TmImportService.cs      # TMX/CSV/TSV parsing
+    ├── Models/
+    │   ├── TranslationMemory.cs    # TmEntry, TmSearchResult, LanceTmRow
+    │   ├── GhostTextSuggestion.cs  # RagState, SuggestionMode enums
+    │   └── GrammarIssue.cs         # Grammar error models
+    ├── Interfaces/
+    │   ├── IRagPipelineService.cs  # RAG pipeline contract
+    │   ├── IEmbeddingService.cs    # Embedding model contract
+    │   ├── IVectorDatabaseService.cs # Vector DB contract
+    │   ├── ITmImportService.cs     # TM file import contract
+    │   ├── ILocalInferenceService.cs # LLM inference (Phase 3)
+    │   └── IGrammarCheckerService.cs # Grammar check (Phase 4)
+    └── Constants/
+        └── AppConstants.cs         # Embedding dims, search limits
 ```
 
 ## Development
@@ -127,18 +202,6 @@ dotnet run --project src/RDAT.Copilot.Desktop
 ```bash
 dotnet test
 ```
-
-## Tri-Channel Ghost Text Architecture
-
-The same proven architecture from the PWA, ported to C# with native threading:
-
-| Channel | Trigger | Output | Preemption |
-|---------|---------|--------|------------|
-| **Ch3 (Prefetch)** | Source sentence change | Full dual-version | Low priority |
-| **Ch5 (Burst)** | 0.8s typing pause | 3–5 words | High (preempts Ch3) |
-| **Ch6 (Pause)** | 1.2s typing pause | 5–20 words | Highest (preempts Ch3) |
-
-Preemption uses `CancellationTokenSource` — when a high-priority channel fires, it calls `.Cancel()` on the background Prefetch token to immediately free the DirectML queue.
 
 ## License
 

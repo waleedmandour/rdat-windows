@@ -50,6 +50,107 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Phase 2: Translation Memory Section -->
+                <Border Background="{StaticResource RDATBgSecondaryBrush}"
+                       BorderBrush="{StaticResource RDATBorderBrush}"
+                       CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="12">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE7C3;" FontSize="14" Foreground="{StaticResource RDATTealBrush}"/>
+                            <TextBlock Text="Translation Memory — قاعدة الترجمة" FontSize="14"
+                                      Foreground="{StaticResource RDATTextBrush}"
+                                      FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Configure the local Translation Memory database and embedding model. TM matches appear as GTR (Guaranteed Translation Result) ghost text in the target editor."
+                                  FontSize="12" Foreground="{StaticResource RDATTextMutedBrush}"
+                                  TextWrapping="Wrap"/>
+
+                        <!-- Embedding Model Path -->
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Embedding Model Path" FontSize="12"
+                                      Foreground="{StaticResource RDATTextMutedBrush}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBox x:Name="EmbeddingModelPathBox"
+                                        PlaceholderText="C:\Models\paraphrase-multilingual-MiniLM-L12-v2"
+                                        Text="{x:Bind ViewModel.EmbeddingModelPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        IsReadOnly="False" MinWidth="350"
+                                        Background="{StaticResource RDATBgTertiaryBrush}"/>
+                                <Button Content="&#xE8E5;" Click="BrowseModel_Click"
+                                       ToolTipService.ToolTip="Browse for model folder"
+                                       Padding="8" CornerRadius="4"
+                                       Background="{StaticResource RDATBgTertiaryBrush}"
+                                       BorderBrush="{StaticResource RDATBorderBrush}">
+                                    <FontIcon Glyph="&#xE8DA;" FontSize="12"
+                                             Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="ONNX model: paraphrase-multilingual-MiniLM-L12-v2 (384-dim)"
+                                      FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                        </StackPanel>
+
+                        <!-- TM Database Path -->
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="TM Database Path" FontSize="12"
+                                      Foreground="{StaticResource RDATTextMutedBrush}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBox x:Name="TmDbPathBox"
+                                        PlaceholderText="%LOCALAPPDATA%\RDAT\TM\Database"
+                                        Text="{x:Bind ViewModel.TmDbPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        MinWidth="350"
+                                        Background="{StaticResource RDATBgTertiaryBrush}"/>
+                                <Button Content="&#xE8E5;" Click="BrowseDb_Click"
+                                       ToolTipService.ToolTip="Browse for database folder"
+                                       Padding="8" CornerRadius="4"
+                                       Background="{StaticResource RDATBgTertiaryBrush}"
+                                       BorderBrush="{StaticResource RDATBorderBrush}">
+                                    <FontIcon Glyph="&#xE8DA;" FontSize="12"
+                                             Foreground="{StaticResource RDATTextMutedBrush}"/>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="LanceDB disk-backed database (supports 10M+ entries)"
+                                      FontSize="10" Foreground="{StaticResource RDATTextDimBrush}"/>
+                        </StackPanel>
+
+                        <!-- RAG Pipeline Status -->
+                        <Border Background="{StaticResource RDATBgPrimaryBrush}"
+                               BorderBrush="{StaticResource RDATBorderBrush}"
+                               Padding="12" CornerRadius="4">
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="RAG Pipeline Status" FontSize="12"
+                                              Foreground="{StaticResource RDATTextMutedBrush}"
+                                              FontWeight="SemiBold"/>
+                                    <Ellipse Width="6" Height="6">
+                                        <Ellipse.Fill>
+                                            <SolidColorBrush Color="{StaticResource RDATTealPrimary}"/>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="State:" FontSize="11"
+                                              Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="{x:Bind ViewModel.RagPipelineState, Mode=OneWay}"
+                                              FontSize="11"
+                                              Foreground="{StaticResource RDATTextBrush}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="TM Entries:" FontSize="11"
+                                              Foreground="{StaticResource RDATTextDimBrush}"/>
+                                    <TextBlock Text="{x:Bind ViewModel.TmEntryCount, Mode=OneWay}"
+                                              FontSize="11"
+                                              Foreground="{StaticResource RDATTextBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Initialize / Reinitialize RAG -->
+                        <Button Content="Initialize RAG Pipeline" Click="InitRag_Click"
+                               Style="{StaticResource AccentButtonStyle}"
+                               Padding="20,8" CornerRadius="4"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- API Keys Section -->
                 <Border Background="{StaticResource RDATBgSecondaryBrush}"
                        BorderBrush="{StaticResource RDATBorderBrush}"

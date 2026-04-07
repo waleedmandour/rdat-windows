@@ -1,28 +1,57 @@
-name: Build & Test
+name: Build RDAT Copilot Desktop
 
 on:
   push:
-    branches: [main]
+    branches: [ main, develop ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  CONFIGURATION: 'Release'
 
 jobs:
   build:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [x64]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup .NET 9
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore RDAT.Copilot.sln
 
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
+      - name: Build Core library
+        run: dotnet build src/RDAT.Copilot.Core/RDAT.Copilot.Core.csproj \
+            --configuration ${{ env.CONFIGURATION }} \
+            --no-restore \
+            -p:Platform=${{ matrix.platform }}
 
-      - name: Test
-        run: dotnet test --configuration Release --no-build --verbosity normal
+      - name: Build Desktop app
+        run: dotnet build src/RDAT.Copilot.Desktop/RDAT.Copilot.Desktop.csproj \
+            --configuration ${{ env.CONFIGURATION }} \
+            --no-restore \
+            -p:Platform=${{ matrix.platform }} \
+            -p:WindowsAppSDKSelfContained=true
+
+      - name: Run Core tests
+        run: dotnet test tests/RDAT.Copilot.Core.Tests/RDAT.Copilot.Core.Tests.csproj \
+            --configuration ${{ env.CONFIGURATION }} \
+            --no-build \
+            --verbosity normal \
+            -p:Platform=${{ matrix.platform }}
+
+      - name: Upload Desktop build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: RDAT-Copilot-${{ matrix.platform }}
+          path: src/RDAT.Copilot.Desktop/bin/${{ env.CONFIGURATION }}/net9.0-windows10.0.19041.0/${{ matrix.platform }}/publish/
+          if-no-files-found: ignore
