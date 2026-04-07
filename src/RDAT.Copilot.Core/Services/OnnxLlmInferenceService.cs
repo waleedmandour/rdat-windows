@@ -39,7 +39,8 @@ public sealed class OnnxLlmInferenceService : ILocalInferenceService, IDisposabl
     /// <inheritdoc/>
     public async Task InitializeAsync(
         string modelPath,
-        IProgress<(double Progress, string Text)>? progress = null)
+        IProgress<(double Progress, string Text)>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(modelPath);
 
@@ -54,6 +55,8 @@ public sealed class OnnxLlmInferenceService : ILocalInferenceService, IDisposabl
         {
             await Task.Run(() =>
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 progress?.Report((0.2, "Verifying model files..."));
 
                 // Verify model directory structure
@@ -99,6 +102,12 @@ public sealed class OnnxLlmInferenceService : ILocalInferenceService, IDisposabl
             _logger.LogInformation(
                 "[LLM] Model loaded from: {Path}, State: Ready",
                 modelPath);
+        }
+        catch (OperationCanceledException)
+        {
+            State = LlmState.Idle;
+            _logger.LogInformation("[LLM] Model initialization cancelled");
+            throw;
         }
         catch (Exception ex)
         {
@@ -273,7 +282,7 @@ public sealed class OnnxLlmInferenceService : ILocalInferenceService, IDisposabl
     {
         if (_model is null) return null;
 
-        var modelType = _model.GetType();
+        var modelType = (Type)_model.GetType();
 
         // Try Generate method with params
         var generateMethod = modelType.GetMethod("Generate", new[] { typeof(string), typeof(string) });

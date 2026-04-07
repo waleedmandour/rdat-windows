@@ -1,3 +1,5 @@
+using RDAT.Copilot.Core.Models;
+
 namespace RDAT.Copilot.Core.Interfaces;
 
 /// <summary>

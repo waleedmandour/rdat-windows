@@ -81,7 +81,7 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task StopAsync()
+    public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         IsActive = false;
 
@@ -93,7 +93,7 @@ public sealed class GhostTextCoordinator : IGhostTextCoordinator, IDisposable
         _queueService.ClearPending();
 
         // Stop the queue
-        await _queueService.StopAsync().ConfigureAwait(false);
+        await _queueService.StopAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("[GhostText] Coordinator stopped");
     }

@@ -59,13 +59,16 @@ public sealed class AmtaLinterService : IAmtaLinterService, IDisposable
     /// <inheritdoc/>
     public async Task<int> LoadGlossaryAsync(
         string filePath,
-        IProgress<(double Progress, string Text)>? progress = null)
+        IProgress<(double Progress, string Text)>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(filePath))
             throw new ArgumentException("Glossary file path cannot be empty.", nameof(filePath));
 
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"Glossary file not found: {filePath}", filePath);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         State = AmtaLinterState.Loading;
         progress?.Report((0, "Loading glossary..."));
@@ -83,7 +86,7 @@ public sealed class AmtaLinterService : IAmtaLinterService, IDisposable
                     parsedTerms = ParseCsvGlossary(filePath);
                     break;
                 case ".json":
-                    parsedTerms = await ParseJsonGlossaryAsync(filePath).ConfigureAwait(false);
+                    parsedTerms = await ParseJsonGlossaryAsync(filePath, cancellationToken).ConfigureAwait(false);
                     break;
                 case ".tsv":
                 case ".txt":
@@ -101,6 +104,12 @@ public sealed class AmtaLinterService : IAmtaLinterService, IDisposable
                 _terms.Count, Path.GetFileName(filePath), sw.Elapsed.TotalMilliseconds);
 
             return _terms.Count;
+        }
+        catch (OperationCanceledException)
+        {
+            State = AmtaLinterState.Idle;
+            _logger.LogInformation("[AMTA-Linter] Glossary loading cancelled");
+            throw;
         }
         catch (Exception ex)
         {
@@ -413,9 +422,9 @@ public sealed class AmtaLinterService : IAmtaLinterService, IDisposable
     /// Parse a JSON glossary file.
     /// Format: [{ "source": "...", "target": "...", "domain": "...", "notes": "...", "required": true }]
     /// </summary>
-    private async Task<List<GlossaryTerm>> ParseJsonGlossaryAsync(string filePath)
+    private async Task<List<GlossaryTerm>> ParseJsonGlossaryAsync(string filePath, CancellationToken cancellationToken)
     {
-        var json = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
+        var json = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
         var terms = new List<GlossaryTerm>();
 
         try

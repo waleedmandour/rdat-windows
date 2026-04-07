@@ -73,7 +73,7 @@ public sealed class LlmQueueService : ILlmQueueService, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task StopAsync()
+    public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         if (!IsRunning) return;
 
@@ -87,7 +87,7 @@ public sealed class LlmQueueService : ILlmQueueService, IDisposable
         {
             try
             {
-                await Task.WhenAny(_processingLoop, Task.Delay(5000));
+                await Task.WhenAny(_processingLoop, Task.Delay(5000, cancellationToken));
             }
             catch (Exception ex)
             {
@@ -103,7 +103,7 @@ public sealed class LlmQueueService : ILlmQueueService, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task<string> EnqueueAsync(LlmRequest request)
+    public async Task<string> EnqueueAsync(LlmRequest request, CancellationToken cancellationToken = default)
     {
         if (!_inferenceService.IsReady)
         {
@@ -128,7 +128,7 @@ public sealed class LlmQueueService : ILlmQueueService, IDisposable
         }
 
         // Write to channel
-        await _requestChannel.Writer.WriteAsync(request);
+        await _requestChannel.Writer.WriteAsync(request, cancellationToken);
 
         _logger.LogDebug(
             "[LLM-Queue] Enqueued: {Channel} (priority {Priority}, queue depth: {Depth})",

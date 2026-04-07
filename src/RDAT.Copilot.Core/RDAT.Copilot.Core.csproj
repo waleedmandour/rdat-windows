@@ -9,12 +9,16 @@
     <!-- ONNX Runtime for multilingual embedding inference -->
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" />
     <!-- LanceDB disk-backed vector database -->
-    <PackageReference Include="LanceDB" Version="0.14.0" />
+    <PackageReference Include="LanceDB" Version="2.3.0" />
     <!-- CSV parsing for TM import -->
     <PackageReference Include="CsvHelper" Version="33.0.1" />
     <!-- ONNX Runtime GenAI for LLM inference (DirectML GPU/NPU) -->
     <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.6.0" />
     <!-- .docx parsing for document import (Phase 5) -->
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.2.0" />
+    <!-- Logging abstractions (ILogger) -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
+    <!-- HTTP client factory -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.3" />
   </ItemGroup>
 </Project>

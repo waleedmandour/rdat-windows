@@ -109,10 +109,10 @@ public sealed class TmImportService : ITmImportService
             csv.Read();
             csv.ReadHeader();
 
-            var sourceCol = GetColumnName(csv.Context.HeaderRecord, "source", "source_text", "english", "en");
-            var targetCol = GetColumnName(csv.Context.HeaderRecord, "target", "target_text", "arabic", "ar");
-            var domainCol = GetColumnName(csv.Context.HeaderRecord, "domain", "category", "subject");
-            var qualityCol = GetColumnName(csv.Context.HeaderRecord, "quality", "score", "confidence");
+            var sourceCol = GetColumnName(csv.Context.Reader.HeaderRecord, "source", "source_text", "english", "en");
+            var targetCol = GetColumnName(csv.Context.Reader.HeaderRecord, "target", "target_text", "arabic", "ar");
+            var domainCol = GetColumnName(csv.Context.Reader.HeaderRecord, "domain", "category", "subject");
+            var qualityCol = GetColumnName(csv.Context.Reader.HeaderRecord, "quality", "score", "confidence");
 
             while (csv.Read())
             {

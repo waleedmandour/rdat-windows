@@ -86,7 +86,7 @@ public sealed class GeminiCloudService : IGeminiCloudService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> ConfigureAsync(string apiKey)
+    public async Task<bool> ConfigureAsync(string apiKey, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
         {
@@ -101,7 +101,7 @@ public sealed class GeminiCloudService : IGeminiCloudService
             State = GeminiState.Configured;
 
             // Validate by making a test call
-            var isValid = await ValidateKeyAsync().ConfigureAwait(false);
+            var isValid = await ValidateKeyAsync(cancellationToken).ConfigureAwait(false);
             State = isValid ? GeminiState.Ready : GeminiState.Configured;
 
             return isValid;
@@ -115,7 +115,7 @@ public sealed class GeminiCloudService : IGeminiCloudService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> ValidateKeyAsync()
+    public async Task<bool> ValidateKeyAsync(CancellationToken cancellationToken = default)
     {
         var apiKey = _credentialService.GetCredential(CredentialResource, CredentialUsername);
         if (string.IsNullOrWhiteSpace(apiKey))
@@ -150,7 +150,7 @@ public sealed class GeminiCloudService : IGeminiCloudService
             var json = JsonSerializer.Serialize(testPayload, _jsonOptions);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync(testUrl, content).ConfigureAwait(false);
+            var response = await _httpClient.PostAsync(testUrl, content, cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -319,7 +319,7 @@ public sealed class GeminiCloudService : IGeminiCloudService
     }
 
     /// <inheritdoc/>
-    public Task RemoveApiKeyAsync()
+    public Task RemoveApiKeyAsync(CancellationToken cancellationToken = default)
     {
         _credentialService.RemoveCredential(CredentialResource, CredentialUsername);
         State = GeminiState.NotConfigured;

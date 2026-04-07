@@ -301,7 +301,7 @@ public sealed class RagPipelineService : IRagPipelineService, IDisposable
             DomainBreakdown: new Dictionary<string, int>(),
             LanguagePairs: new Dictionary<string, int>
             {
-                { "en→ar", count },
+                { "en→ar", (int)count },
                 { "ar→en", 0 }
             },
             DbSizeMb: dbSizeMb

@@ -147,51 +147,51 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
 
             // Pad to uniform length
             var batchSize = tokenIds.Length;
-            var inputIds = new long[batchSize, maxLen];
-            var attentionMask = new long[batchSize, maxLen];
-            var tokenTypeIds = new long[batchSize, maxLen];
+            var inputIds = new long[batchSize * maxLen];
+            var attentionMask = new long[batchSize * maxLen];
+            var tokenTypeIds = new long[batchSize * maxLen];
 
             for (int i = 0; i < batchSize; i++)
             {
                 for (int j = 0; j < tokenIds[i].Length; j++)
                 {
-                    inputIds[i, j] = tokenIds[i][j];
-                    attentionMask[i, j] = 1;
+                    inputIds[i * maxLen + j] = tokenIds[i][j];
+                    attentionMask[i * maxLen + j] = 1;
                 }
                 // Padding positions get attention mask = 0
             }
 
-            // Create input tensors
+            // Create input tensors as DenseTensor for NamedOnnxValue
             var inputNames = _session.InputNames.ToList();
-            var inputMap = new Dictionary<string, OrtValue>();
+            var inputs = new List<NamedOnnxValue>();
+            var shape = new[] { batchSize, maxLen };
 
             if (inputNames.Contains("input_ids"))
             {
-                inputMap["input_ids"] = OrtValue.CreateTensorValueFromMemory(
-                    inputIds.AsMemory(), new[] { batchSize, maxLen });
+                inputs.Add(NamedOnnxValue.CreateFromTensor(
+                    "input_ids", new DenseTensor<long>(inputIds, shape)));
             }
             if (inputNames.Contains("attention_mask"))
             {
-                inputMap["attention_mask"] = OrtValue.CreateTensorValueFromMemory(
-                    attentionMask.AsMemory(), new[] { batchSize, maxLen });
+                inputs.Add(NamedOnnxValue.CreateFromTensor(
+                    "attention_mask", new DenseTensor<long>(attentionMask, shape)));
             }
             if (inputNames.Contains("token_type_ids"))
             {
-                inputMap["token_type_ids"] = OrtValue.CreateTensorValueFromMemory(
-                    tokenTypeIds.AsMemory(), new[] { batchSize, maxLen });
+                inputs.Add(NamedOnnxValue.CreateFromTensor(
+                    "token_type_ids", new DenseTensor<long>(tokenTypeIds, shape)));
             }
 
             // Run inference
-            using var outputs = _session.Run(inputMap);
+            using var outputs = _session.Run(inputs);
 
             // Extract embeddings (last hidden state or pooled output)
-            var outputName = _session.OutputNames.First();
-            var outputTensor = outputs[0];
-            var outputArray = outputTensor.GetTensorDataAsSpan<float>().ToArray();
+            var outputTensor = outputs[0].AsTensor<float>();
+            var outputArray = outputTensor.ToArray();
 
             // If output shape is [batch, seq_len, hidden_dim], mean-pool over seq_len
-            var outputShape = outputTensor.GetTensorType().Shape;
-            var hiddenDim = (int)(outputShape[^1]);
+            var outputShape = outputTensor.Dimensions.ToArray();
+            var hiddenDim = outputShape[^1];
 
             // Build result array (include placeholders for empty inputs)
             var results = new float[texts.Length][];
@@ -203,12 +203,12 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
                 if (outputShape.Length == 3)
                 {
                     // [batch, seq_len, hidden_dim] — mean pool over non-padded tokens
-                    var seqLen = (int)(outputShape[1]);
+                    var seqLen = outputShape[1];
                     var tokenCount = 0;
 
                     for (int j = 0; j < seqLen; j++)
                     {
-                        if (attentionMask[i, j] == 1)
+                        if (attentionMask[i * maxLen + j] == 1)
                         {
                             for (int k = 0; k < hiddenDim; k++)
                             {
