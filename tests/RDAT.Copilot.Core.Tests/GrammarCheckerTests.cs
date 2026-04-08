@@ -1,4 +1,5 @@
 using RDAT.Copilot.Core.Models;
+using Xunit;
 
 namespace RDAT.Copilot.Core.Tests;
 

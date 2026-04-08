@@ -123,7 +123,7 @@ public record LanceTmRow
             TargetLanguage = entry.TargetLanguage,
             Domain = entry.Domain,
             QualityScore = entry.QualityScore,
-            CreatedAtUnix = entry.CreatedAt?.Ticks ?? DateTime.UtcNow.Ticks
+            CreatedAtUnix = new DateTimeOffset(entry.CreatedAt ?? DateTime.UtcNow).ToUnixTimeSeconds()
         };
     }
 
@@ -140,7 +140,7 @@ public record LanceTmRow
             TargetLanguage,
             Domain,
             QualityScore,
-            new DateTime(CreatedAtUnix, DateTimeKind.Utc)
+            DateTimeOffset.FromUnixTimeSeconds(CreatedAtUnix).DateTime
         );
     }
 }

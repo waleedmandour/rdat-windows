@@ -99,7 +99,7 @@ public class TranslationMemoryTests
         Assert.Equal("ar", row.TargetLanguage);
         Assert.Equal("General", row.Domain);
         Assert.Equal(0.95, row.QualityScore);
-        Assert.Equal(entry.CreatedAt.Value.Ticks, row.CreatedAtUnix);
+        Assert.Equal(new DateTimeOffset(entry.CreatedAt.Value).ToUnixTimeSeconds(), row.CreatedAtUnix);
     }
 
     [Fact]

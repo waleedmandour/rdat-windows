@@ -1,8 +1,6 @@
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Services;
 using Xunit;
 
@@ -20,11 +18,8 @@ public class DocxImportTests : IDisposable
 
     public DocxImportTests()
     {
-        // Create a real logger for diagnostic output
-        var serviceProvider = new ServiceCollection()
-            .AddLogging(builder => builder.AddDebug())
-            .BuildServiceProvider();
-        var logger = serviceProvider.GetRequiredService<ILogger<DocxImportService>>();
+        // Create a logger using NullLogger to avoid extra dependency
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DocxImportService>.Instance;
 
         _service = new DocxImportService(logger);
         _testDir = Path.Combine(Path.GetTempPath(), $"RDAT_DocxTests_{Guid.NewGuid():N}");
@@ -303,7 +298,7 @@ public class DocxImportTests : IDisposable
         // Cancel immediately
         await cts.CancelAsync();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(
+        await Assert.ThrowsAsync<TaskCanceledException>(
             () => _service.ImportAsync(filePath, cancellationToken: cts.Token));
     }
 

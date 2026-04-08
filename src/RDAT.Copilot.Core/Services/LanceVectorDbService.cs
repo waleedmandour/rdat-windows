@@ -124,9 +124,10 @@ public sealed class LanceVectorDbService : IVectorDatabaseService, IDisposable
 
         return results.Select(row =>
         {
-            // LanceDB returns distance under "_distance" key
+            // LanceDB returns cosine distance under "_distance" key.
+            // Convert to similarity: similarity = 1 - distance (1.0 = identical, 0.0 = unrelated).
             var score = row.TryGetValue("_distance", out var distVal)
-                ? Convert.ToSingle(distVal)
+                ? 1f - Convert.ToSingle(distVal)
                 : 0f;
 
             var sourceText = row.TryGetValue("source_text", out var st)
@@ -309,7 +310,7 @@ public sealed class LanceVectorDbService : IVectorDatabaseService, IDisposable
                 targetLanguageBuilder.Append("ar");
                 domainBuilder.AppendNull();
                 qualityScoreBuilder.Append(1.0);
-                createdAtUnixBuilder.Append(DateTime.UtcNow.Ticks);
+                createdAtUnixBuilder.Append(new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds());
             }
 
             var emb = entry.Embedding;

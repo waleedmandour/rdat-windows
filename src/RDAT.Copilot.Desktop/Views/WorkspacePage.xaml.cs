@@ -395,7 +395,7 @@ public sealed partial class WorkspacePage : Page
         InitializeWithWindow.Initialize(picker, hwnd);
 
         picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.List;
-        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationLocation.DocumentsLibrary;
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add(".csv");
         picker.FileTypeFilter.Add(".tmx");
         picker.FileTypeFilter.Add(".tsv");
@@ -425,7 +425,7 @@ public sealed partial class WorkspacePage : Page
         InitializeWithWindow.Initialize(picker, hwnd);
 
         picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.List;
-        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationLocation.DocumentsLibrary;
+        picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add(".docx");
 
         var file = await picker.PickSingleFileAsync();

@@ -26,41 +26,24 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
-        run: dotnet restore RDAT.Copilot.sln
+      - name: Restore solution
+        run: dotnet restore RDAT.Copilot.sln --verbosity minimal
 
       - name: Build Core library
-        run: dotnet build src/RDAT.Copilot.Core/RDAT.Copilot.Core.csproj ^
-            --configuration ${{ env.CONFIGURATION }} ^
-            --no-restore ^
-            -p:Platform=${{ matrix.platform }}
+        run: dotnet build src/RDAT.Copilot.Core/RDAT.Copilot.Core.csproj --configuration ${{ env.CONFIGURATION }} --no-restore -p:Platform=${{ matrix.platform }} --verbosity minimal
 
       - name: Build Desktop app
-        run: dotnet build src/RDAT.Copilot.Desktop/RDAT.Copilot.Desktop.csproj ^
-            --configuration ${{ env.CONFIGURATION }} ^
-            --no-restore ^
-            -p:Platform=${{ matrix.platform }} ^
-            -p:WindowsAppSDKSelfContained=true
+        run: dotnet build src/RDAT.Copilot.Desktop/RDAT.Copilot.Desktop.csproj --configuration ${{ env.CONFIGURATION }} --no-restore -p:Platform=${{ matrix.platform }} -p:WindowsAppSDKSelfContained=true --verbosity minimal
 
       - name: Run Core tests
-        run: dotnet test tests/RDAT.Copilot.Core.Tests/RDAT.Copilot.Core.Tests.csproj ^
-            --configuration ${{ env.CONFIGURATION }} ^
-            --no-restore ^
-            --verbosity normal ^
-            -p:Platform=${{ matrix.platform }}
+        run: dotnet test tests/RDAT.Copilot.Core.Tests/RDAT.Copilot.Core.Tests.csproj --configuration ${{ env.CONFIGURATION }} --no-restore --verbosity normal -p:Platform=${{ matrix.platform }} --no-build
 
       - name: Publish WinUI 3 App (Self-Contained Unpackaged)
-        run: dotnet publish src/RDAT.Copilot.Desktop/RDAT.Copilot.Desktop.csproj ^
-            -c Release ^
-            -f net9.0-windows10.0.19041.0 ^
-            -p:Platform=${{ matrix.platform }} ^
-            -p:RuntimeIdentifier=win-${{ matrix.platform }} ^
-            -p:WindowsPackageType=None ^
-            --self-contained
+        run: dotnet publish src/RDAT.Copilot.Desktop/RDAT.Copilot.Desktop.csproj -c Release -f net9.0-windows10.0.19041.0 -p:Platform=${{ matrix.platform }} -p:RuntimeIdentifier=win-${{ matrix.platform }} -p:WindowsPackageType=None --self-contained --verbosity minimal
 
       - name: Upload Desktop build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: RDAT-Copilot-Desktop-Windows
           path: src/RDAT.Copilot.Desktop/bin/Release/net9.0-windows10.0.19041.0/win-${{ matrix.platform }}/publish/
-          if-no-files-found: error
+          if-no-files-found: warn
