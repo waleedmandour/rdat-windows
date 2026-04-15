@@ -1,0 +1,52 @@
+name: Build and Release RDAT Copilot
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on tag push (e.g., v1.0.0, v1.0.0-alpha)
+
+jobs:
+  build-and-release:
+    name: Build Native Windows Executable
+    runs-on: windows-latest
+
+    permissions:
+      contents: write # Needed to upload release assets
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      # WinUI 3 workloads may require restoring Windows SDK components. 
+      # .NET 8 SDK should natively handle net8.0-windows10.0.19041.0 workloads, 
+      # but we explicitly invoke restore to prime the pipelines.
+      - name: Restore NuGet Packages
+        run: dotnet restore .\src\RDAT.Copilot.App\RDAT.Copilot.App.csproj
+
+      - name: Execute Build Script
+        shell: powershell
+        run: |
+          # This invokes the identical powershell script you rely on locally
+          .\scripts\build-release.ps1
+          
+          # We dynamically find the zip file since the name might have version tags in it
+          $zipPath = Get-ChildItem -Path ".\RDAT-Copilot-Portable-*.zip" | Select-Object -First 1
+          if ($zipPath) {
+            echo "RELEASE_ASSET=$($zipPath.Name)" >> $env:GITHUB_ENV
+          }
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ env.RELEASE_ASSET }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
