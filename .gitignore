@@ -1,0 +1,19 @@
+# .NET
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+
+# Native Dependencies
+*.dll
+*.exe
+*.pdb
+
+# AI MODELS (DO NOT REMOVE)
+/src/RDAT.Copilot.App/Assets/Models/
+/scripts/temp_models/
+*.onnx
+*.bin
+
+# LanceDB Data
+*.lance/
