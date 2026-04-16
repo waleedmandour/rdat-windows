@@ -31,6 +31,32 @@ jobs:
       - name: Install WinUI 3 Workloads
         run: dotnet workload install maui-windows --ignore-failed-sources
 
+      - name: Ensure Windows 10/11 SDK for CsWinRT
+        shell: powershell
+        run: |
+          $sdkRoot = "${env:ProgramFiles(x86)}\Windows Kits\10\Platforms\UAP"
+          if (-not (Test-Path "$sdkRoot\10.0.19041.0\Platform.xml")) {
+            Write-Host "Installing Windows 10 SDK 19041 (UAP)..."
+            # Use the Visual Studio installer to add just the UAP SDK
+            $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+            $vsPath = & $vsWhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+            if ($vsPath) {
+              $channel = if ($env:GITHUB_ACTIONS -eq 'true') { 'VisualStudio.17.Release' } else { '17' }
+              $installer = Join-Path $vsPath "..\..\VC\Auxiliary\Build\Microsoft.VisualStudio.Installer.exe"
+              if (Test-Path $installer) {
+                Start-Process -FilePath $installer -ArgumentList 'modify', '--installPath', $vsPath, '--add', 'Microsoft.VisualStudio.Component.Windows10SDK.19041', '--quiet', '--norestart' -Wait -ErrorAction SilentlyContinue
+              }
+            }
+            # Fallback: create minimal Platform.xml stub
+            New-Item -ItemType Directory -Path "$sdkRoot\10.0.19041.0" -Force -ErrorAction SilentlyContinue | Out-Null
+            if (!(Test-Path "$sdkRoot\10.0.19041.0\Platform.xml")) {
+              @'
+        <ApplicationPlatform xmlns="http://schemas.microsoft.com/appx/2016/foundation" Name="UAP" Version="10.0.19041.0" />
+'@ | Set-Content -Path "$sdkRoot\10.0.19041.0\Platform.xml" -Encoding UTF8
+              Write-Host "Created minimal Platform.xml stub"
+            }
+          }
+
       - name: Restore NuGet Packages
         run: dotnet restore RDAT.Copilot.sln
 

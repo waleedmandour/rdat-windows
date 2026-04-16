@@ -7,7 +7,7 @@ incorporates native required binaries for DirectML + ONNX and LanceDB, and zips 
 #>
 
 $ErrorActionPreference = "Stop"
-$PublishDir = ".\src\RDAT.Copilot.App\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish"
+$PublishDir = ".\src\RDAT.Copilot.App\bin\Release\net8.0-windows10.0.22621.0\win-x64\publish"
 $ZipName = "RDAT-Copilot-Portable-v1.0.zip"
 $SlnFilePath = ".\RDAT.Copilot.sln"
 
