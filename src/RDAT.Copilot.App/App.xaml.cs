@@ -5,6 +5,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
+using RDAT.Copilot.App.Bridges;
 using RDAT.Copilot.App.Hosting;
 using RDAT.Copilot.App.ViewModels;
 using RDAT.Copilot.App.Views;
@@ -12,7 +13,6 @@ using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Services;
 using RDAT.Copilot.Infrastructure.LanceDb;
 using RDAT.Copilot.Infrastructure.Linting;
-using RDAT.Copilot.Infrastructure.Monaco;
 using RDAT.Copilot.Infrastructure.Onnx;
 
 namespace RDAT.Copilot.App;

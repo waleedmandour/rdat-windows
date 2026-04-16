@@ -9,7 +9,7 @@ using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;
 using RDAT.Copilot.Core.Services;
 
-namespace RDAT.Copilot.Infrastructure.Monaco;
+namespace RDAT.Copilot.App.Bridges;
 
 /// <summary>
 /// Bidirectional bridge between WinUI 3 WebView2 (Monaco Editor) and
