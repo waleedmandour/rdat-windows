@@ -9,7 +9,6 @@
 // Privacy: 100% offline - no network calls.
 // ========================================================================
 
-using System.Collections.Concurrent;
 using System.Text.Json;
 using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;

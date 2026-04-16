@@ -147,7 +147,7 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
             {
                 Text = prediction,
                 Confidence = 1.0, // Greedy decode gives deterministic output
-                LatencyMs = _lastLatency.Milliseconds,
+                LatencyMs = (long)_lastLatency.TotalMilliseconds,
                 Source = "local",
                 IsSuppressed = false
             };

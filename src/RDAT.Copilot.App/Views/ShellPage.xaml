@@ -35,7 +35,7 @@
                             <TextBlock x:Name="LinterStatusText" Text="Linter: Ready" FontSize="12" Opacity="0.8"/>
                         </Border>
                         <Button x:Name="UndockTmButton" Click="UndockTmButton_Click"
-                            ToolTipService.ToolTip="Undock TM Panel" Style="{StaticResource SubtleButtonStyle}">
+                            ToolTipService.ToolTip="Undock TM Panel">
                             <FontIcon Glyph="&#xE8A4;" FontSize="16"/>
                         </Button>
                     </StackPanel>

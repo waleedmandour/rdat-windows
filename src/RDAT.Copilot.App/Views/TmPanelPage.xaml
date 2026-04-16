@@ -52,7 +52,7 @@
                         <TextBlock Grid.Column="0" Text="{Binding Source}" TextWrapping="Wrap"/>
                         <TextBlock Grid.Column="1" Text="{Binding Target}" TextWrapping="Wrap" FlowDirection="RightToLeft"/>
                         <Border Grid.Column="2" Padding="8,4" CornerRadius="4"
-                                Background="{ThemeResource SubtleFillColorSuccessBrush}"
+                                Background="{ThemeResource SystemFillColorSuccessBrush}"
                                 HorizontalAlignment="Center">
                             <TextBlock Text="{Binding Score}" FontWeight="SemiBold" FontSize="12"/>
                         </Border>
