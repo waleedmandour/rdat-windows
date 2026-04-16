@@ -4,6 +4,7 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.Web.WebView2.Core;
 using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;
 using RDAT.Copilot.Core.Services;
@@ -14,7 +15,8 @@ namespace RDAT.Copilot.Infrastructure.Monaco;
 /// Bidirectional bridge between WinUI 3 WebView2 (Monaco Editor) and
 /// the C# GhostTextCoordinator. Implements IEditorBridge for DI injection.
 ///
-/// Flow: Monaco JS → WebView2 → EditorBridge → GhostTextCoordinator → LLM → Linter → EditorBridge → WebView2 → Monaco JS
+/// Uses CoreWebView2 (from Microsoft.Web.WebView2 SDK) for messaging
+/// to avoid WinUI event args type resolution issues across package versions.
 /// </summary>
 public sealed class EditorBridge : IEditorBridge
 {
@@ -55,10 +57,12 @@ public sealed class EditorBridge : IEditorBridge
     public void Attach(object webView)
     {
         if (webView is not WebView2 wv)
-            throw new ArgumentException($"Expected {nameof(WebView2)}, got {webView?.GetType().Name ?? "null"}", nameof(webView));
+            throw new ArgumentException($"Expected WebView2, got {webView?.GetType().Name ?? "null"}", nameof(webView));
+
         _webView = wv;
-        _webView.WebMessageReceived += OnWebMessageReceived;
-        _logger.LogInformation("EditorBridge attached to WebView2");
+
+        // Initialize CoreWebView2 and subscribe to its messaging events
+        _ = InitializeCoreWebView2Async();
     }
 
     /// <summary>
@@ -85,7 +89,6 @@ public sealed class EditorBridge : IEditorBridge
 
     /// <summary>
     /// Sets the editor text directionality (RTL or LTR).
-    /// Posts a direction change message to the Monaco JavaScript layer.
     /// </summary>
     public void SetDirection(bool isRtl)
     {
@@ -115,11 +118,29 @@ public sealed class EditorBridge : IEditorBridge
         PostGhostTextResult(new GhostTextResult { Text = "" });
     }
 
+    private async Task InitializeCoreWebView2Async()
+    {
+        try
+        {
+            if (_webView == null) return;
+            await _webView.EnsureCoreWebView2Async();
+
+            if (_webView.CoreWebView2 != null)
+            {
+                _webView.CoreWebView2.WebMessageReceived += OnCoreWebMessageReceived;
+                _logger.LogInformation("EditorBridge attached to CoreWebView2");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize CoreWebView2 for EditorBridge");
+        }
+    }
+
     /// <summary>
-    /// Handles incoming messages from the Monaco JavaScript layer.
-    /// Parses keystroke events and forwards them to the GhostTextCoordinator.
+    /// Handles incoming messages from the Monaco JavaScript layer via CoreWebView2.
     /// </summary>
-    private void OnWebMessageReceived(WebView2 sender, WebView2WebMessageReceivedEventArgs e)
+    private void OnCoreWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         try
         {
@@ -134,12 +155,6 @@ public sealed class EditorBridge : IEditorBridge
             {
                 case "keystroke":
                     HandleKeystrokeMessage(root);
-                    break;
-                case "ghostTextAccepted":
-                    _logger.LogDebug("Ghost text accepted by user");
-                    break;
-                case "ghostTextRejected":
-                    ClearGhostText();
                     break;
             }
         }
@@ -165,14 +180,9 @@ public sealed class EditorBridge : IEditorBridge
             IsRtl = isRtl
         };
 
-        // Forward to coordinator which handles debouncing and prediction pipeline
         _coordinator.OnKeystroke(keystroke);
     }
 
-    /// <summary>
-    /// Callback when the coordinator produces a ghost text prediction.
-    /// Pushes the result to the Monaco editor via WebView2.
-    /// </summary>
     private void OnGhostTextReceived(GhostTextResult result)
     {
         PostGhostTextResult(result);
@@ -183,12 +193,11 @@ public sealed class EditorBridge : IEditorBridge
         if (_isDisposed) return;
         _isDisposed = true;
 
-        if (_webView != null)
+        if (_webView?.CoreWebView2 != null)
         {
-            _webView.WebMessageReceived -= OnWebMessageReceived;
+            _webView.CoreWebView2.WebMessageReceived -= OnCoreWebMessageReceived;
         }
 
         _ghostTextSubscription?.Dispose();
-        // Note: Do NOT dispose the coordinator here - it's owned by the DI container
     }
 }
