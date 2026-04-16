@@ -27,10 +27,10 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
     private const int DefaultMaxNewTokens = 64;
     private const int DefaultMaxStreamingTokens = 2048;
 
-    public OnnxLlmService(ILogger<OnnxLlmService> logger, ILogger<ModelLifetimeScope> scopeLogger)
+    public OnnxLlmService(ILogger<OnnxLlmService> logger)
     {
-        _logger = logger;
-        _modelScope = new ModelLifetimeScope(scopeLogger);
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _modelScope = new ModelLifetimeScope();
     }
 
     public bool IsModelLoaded => _isLoaded;
@@ -98,7 +98,7 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
         if (!_isLoaded)
             return new GhostTextResult { Text = "", Confidence = 0 };
 
-        var sw = ValueStopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
 
         _modelScope.AcquireLock();
         try
@@ -106,13 +106,11 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
             var tokenizer = _modelScope.AcquireTokenizer();
             var model = _modelScope.AcquireModel();
 
-            // Minimal prompt optimized for ghost text latency
             string prompt = BuildTranslationPrompt(sourceText, sourceLang, targetLang);
 
             using var tokens = tokenizer.Encode(prompt);
             using var generatorParams = new GeneratorParams(model);
 
-            // Greedy search: top_p=1, top_k=1, temperature=0
             generatorParams.SetSearchOption("max_length", tokens.SequenceLength + DefaultMaxNewTokens);
             generatorParams.SetSearchOption("top_p", 1.0);
             generatorParams.SetSearchOption("top_k", 1);
@@ -138,15 +136,16 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
             }
 
             string prediction = tokenizer.Decode(generatedTokens.ToArray());
-            _lastLatency = sw.GetElapsedTime();
+            sw.Stop();
+            _lastLatency = sw.Elapsed;
 
             if (string.IsNullOrWhiteSpace(prediction))
-                return new GhostTextResult { Text = "", Confidence = 0, LatencyMs = _lastLatency.Milliseconds };
+                return new GhostTextResult { Text = "", Confidence = 0, LatencyMs = (long)sw.Elapsed.TotalMilliseconds };
 
             return new GhostTextResult
             {
                 Text = prediction,
-                Confidence = 1.0, // Greedy decode gives deterministic output
+                Confidence = 1.0,
                 LatencyMs = (long)_lastLatency.TotalMilliseconds,
                 Source = "local",
                 IsSuppressed = false
@@ -174,16 +173,5 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _modelScope.DisposeAsync();
-    }
-
-    private file struct ValueStopwatch
-    {
-        private readonly long _startTimestamp;
-
-        private ValueStopwatch(long startTimestamp) => _startTimestamp = startTimestamp;
-
-        public static ValueStopwatch StartNew() => new(Stopwatch.GetTimestamp());
-
-        public TimeSpan GetElapsedTime() => Stopwatch.GetElapsedTime(_startTimestamp);
     }
 }

@@ -19,6 +19,8 @@
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
     <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.5.0" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.20.1" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240311000" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
     <PackageReference Include="System.Reactive" Version="6.0.0" />
   </ItemGroup>
 
