@@ -25,7 +25,7 @@ $ProgressPreference = "SilentlyContinue"
 
 # -- Configuration ---------------------------------------------------------
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$MainProject = Join-Path $ProjectRoot "src\RDAT.Copilot\RDAT.Copilot.csproj"
+$MainProject = Join-Path $ProjectRoot "src\RDAT.Copilot.App\RDAT.Copilot.App.csproj"
 $PublishDir = Join-Path $ProjectRoot "publish"
 $OutputZip = Join-Path $ProjectRoot "$OutputName.zip"
 
@@ -92,7 +92,6 @@ dotnet publish $MainProject `
     -p:PublishReadyToRun=true `
     -p:PublishSingleFile=false `
     -p:WindowsPackageType=None `
-    -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:DebugType=None `
     -p:DebugSymbols=false `
     --verbosity minimal

@@ -51,14 +51,13 @@
 
             <Microsoft.UI.Xaml.Controls.DataGrid.Columns>
                 <Microsoft.UI.Xaml.Controls.DataGridTextColumn
-                    Header="Source" Binding="{Binding Source}" Width="2*" Tag="Source"/>
+                    Header="Source" Binding="{Binding Source}" Width="2*"/>
                 <Microsoft.UI.Xaml.Controls.DataGridTextColumn
-                    Header="Target" Binding="{Binding Target}" Width="2*" Tag="Target"/>
-                <Microsoft.UI.Xaml.Controls.DataGridComboBoxColumn
-                    Header="Direction" Width="*"
-                    Tag="Direction"/>
+                    Header="Target" Binding="{Binding Target}" Width="2*"/>
                 <Microsoft.UI.Xaml.Controls.DataGridTextColumn
-                    Header="Domain" Binding="{Binding Domain}" Width="*" Tag="Domain"/>
+                    Header="Direction" Binding="{Binding Direction}" Width="*"/>
+                <Microsoft.UI.Xaml.Controls.DataGridTextColumn
+                    Header="Domain" Binding="{Binding Domain}" Width="*"/>
             </Microsoft.UI.Xaml.Controls.DataGrid.Columns>
         </Microsoft.UI.Xaml.Controls.DataGrid>
     </Grid>

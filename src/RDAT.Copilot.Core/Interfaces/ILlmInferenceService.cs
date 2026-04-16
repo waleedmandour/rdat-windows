@@ -16,6 +16,9 @@ namespace RDAT.Copilot.Core.Interfaces;
 /// </summary>
 public interface ILlmInferenceService : IAsyncDisposable
 {
+    /// <summary>Loads the ONNX model from the specified directory.</summary>
+    Task LoadModelAsync(string modelPath, CancellationToken ct = default);
+
     /// <summary>Generates a streaming translation for the given source text.</summary>
     IAsyncEnumerable<string> GenerateStreamingAsync(
         string sourceText,

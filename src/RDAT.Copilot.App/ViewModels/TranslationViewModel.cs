@@ -2,20 +2,24 @@ using System;
 using System.Collections.ObjectModel;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;
-using RDAT.Copilot.Core.Orchestration;
-using RDAT.Copilot.Infrastructure.Monaco;
+using RDAT.Copilot.Core.Services;
 
 namespace RDAT.Copilot.App.ViewModels;
 
+/// <summary>
+/// Main workspace ViewModel that orchestrates the translation editing experience.
+/// Subscribes to the GhostTextCoordinator pipeline and manages document segments,
+/// RTL/LTR direction, and TM search commands.
+/// </summary>
 public sealed partial class TranslationViewModel : ObservableObject, IDisposable
 {
     private readonly GhostTextCoordinator _coordinator;
-    private readonly EditorBridge _editorBridge;
+    private readonly IEditorBridge _editorBridge;
     private readonly ILogger<TranslationViewModel> _logger;
     private IDisposable? _predictionSubscription;
 
@@ -28,36 +32,40 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isRtlDirection = true; // Default to Arabic target
 
+    [ObservableProperty]
+    private bool _hasPrediction;
+
+    [ObservableProperty]
+    private string _predictionText = string.Empty;
+
     public ObservableCollection<string> ExtractedSegments { get; } = new();
 
     public TranslationViewModel(
-        GhostTextCoordinator coordinator, 
-        EditorBridge editorBridge, 
+        GhostTextCoordinator coordinator,
+        IEditorBridge editorBridge,
         ILogger<TranslationViewModel> logger)
     {
-        _coordinator = coordinator;
-        _editorBridge = editorBridge;
-        _logger = logger;
+        _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
+        _editorBridge = editorBridge ?? throw new ArgumentNullException(nameof(editorBridge));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        // Note: The EditorBridge handles pushing GhostText to Monaco natively.
-        // But if the ViewModel needs UI visibility (e.g. status bar info):
+        // Subscribe to ghost text predictions for UI state updates
         _predictionSubscription = _coordinator.GhostTextStream
             .ObserveOn(SynchronizationContext.Current ?? new SynchronizationContext())
             .Subscribe(result =>
             {
-                // UI could listen here for typing suggestion available state.
+                HasPrediction = !string.IsNullOrEmpty(result?.Text) && !result.IsSuppressed;
+                PredictionText = result?.Text ?? "";
                 OnPropertyChanged(nameof(HasPrediction));
             });
     }
-
-    public bool HasPrediction => true; // Could rely on state from GhostTextResult if cached
 
     [RelayCommand]
     private void ToggleDirection()
     {
         IsRtlDirection = !IsRtlDirection;
-        // In a real application, you'd signal the Monaco bridge to switch direction via PostMessage
-        // Example: _editorBridge.SetRtl(IsRtlDirection);
+        _editorBridge.SetDirection(IsRtlDirection);
+        _logger.LogDebug("Direction toggled to {Direction}", IsRtlDirection ? "RTL" : "LTR");
     }
 
     [RelayCommand]
@@ -66,9 +74,8 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
         try
         {
             ExtractedSegments.Clear();
-            
-            // Mock OpenXml Document Parsing Loop
-            // Normally OpenXml PowerTools or DocumentFormat.OpenXml is used
+
+            // Mock OpenXml document parsing — in production, use DocumentFormat.OpenXml
             ExtractedSegments.Add("Overview of the latest technical specifications.");
             ExtractedSegments.Add("Ensure all connections are tight and secure.");
             ExtractedSegments.Add("Always reboot the system post-installation.");
@@ -77,19 +84,36 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
             {
                 ActiveSourceSegment = ExtractedSegments[0];
             }
+
+            _logger.LogInformation("Opened document with {Count} segments", ExtractedSegments.Count);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to open document: {FilePath}", filePath);
         }
-        
+
         await Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private void AcceptPrediction()
+    {
+        _editorBridge.ClearGhostText();
+        HasPrediction = false;
+        PredictionText = "";
+    }
+
+    [RelayCommand]
+    private void RejectPrediction()
+    {
+        _editorBridge.ClearGhostText();
+        HasPrediction = false;
+        PredictionText = "";
     }
 
     public void Dispose()
     {
         _predictionSubscription?.Dispose();
-        _editorBridge.Dispose();
-        _coordinator.Dispose();
+        // Note: Do NOT dispose _editorBridge or _coordinator — they're owned by DI
     }
 }

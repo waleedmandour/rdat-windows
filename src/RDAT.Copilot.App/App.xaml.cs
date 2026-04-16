@@ -35,7 +35,10 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
-        // Core
+        // Logging
+        services.AddLogging(builder => builder.AddDebug());
+
+        // Core Services
         services.AddSingleton<IAmtaLinterService, AmtaLinterService>();
         services.AddSingleton<ISemanticTmService, LanceDbTmService>();
         services.AddSingleton<ILlmInferenceService, OnnxLlmService>();
@@ -45,6 +48,7 @@ public partial class App : Application
         services.AddSingleton<IEditorBridge, EditorBridge>();
 
         // App Services
+        services.AddSingleton<IHardwareService, HardwareService>();
         services.AddSingleton<StartupService>();
 
         // ViewModels
@@ -57,9 +61,17 @@ public partial class App : Application
     {
         _mainWindow = new MainWindow();
 
-        // Run startup sequence
-        var startup = Services.GetRequiredService<StartupService>();
-        await startup.InitializeAsync(_mainWindow);
+        // Run startup sequence (hardware check, model warm-up)
+        try
+        {
+            var startup = Services.GetRequiredService<StartupService>();
+            await startup.InitializeAsync();
+        }
+        catch (System.Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Startup failed: {ex.Message}");
+            // Continue to show UI even if startup fails
+        }
 
         _mainWindow.Content = new ShellPage();
         _mainWindow.Title = "RDAT Copilot - Research Translation Assistant";

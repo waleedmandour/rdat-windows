@@ -1,6 +1,5 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using WinRT.Interop;
 
 namespace RDAT.Copilot.App.Views;
 
