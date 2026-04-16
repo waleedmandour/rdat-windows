@@ -3,7 +3,7 @@
 // Location: src/RDAT.Copilot.Core/Interfaces/
 // ========================================================================
 
-using System.Reactive.Subjects;
+using RDAT.Copilot.Core.Models;
 
 namespace RDAT.Copilot.Core.Interfaces;
 
@@ -107,11 +107,13 @@ public interface IAmtaLinterService : IDisposable
 /// <summary>
 /// Bidirectional bridge between C# application logic and Monaco Editor
 /// running inside a WinUI 3 WebView2 control.
+/// Uses object for the webView parameter to keep Core UI-framework-agnostic.
 /// </summary>
 public interface IEditorBridge : IDisposable
 {
-    /// <summary>Attaches to a WebView2 instance and starts listening.</summary>
-    void Attach(Microsoft.UI.Xaml.Controls.WebView2 webView);
+    /// <summary>Attaches to a WebView2 instance and starts listening.
+    /// The webView parameter must be a Microsoft.UI.Xaml.Controls.WebView2 instance.</summary>
+    void Attach(object webView);
 
     /// <summary>Observable stream of keystroke events from the editor.</summary>
     IObservable<EditorKeystroke> KeystrokeStream { get; }

@@ -52,9 +52,11 @@ public sealed class EditorBridge : IEditorBridge
     /// Attaches the bridge to a WinUI 3 WebView2 control and begins listening
     /// for keystroke messages from the Monaco JavaScript layer.
     /// </summary>
-    public void Attach(WebView2 webView)
+    public void Attach(object webView)
     {
-        _webView = webView ?? throw new ArgumentNullException(nameof(webView));
+        if (webView is not WebView2 wv)
+            throw new ArgumentException($"Expected {nameof(WebView2)}, got {webView?.GetType().Name ?? "null"}", nameof(webView));
+        _webView = wv;
         _webView.WebMessageReceived += OnWebMessageReceived;
         _logger.LogInformation("EditorBridge attached to WebView2");
     }
