@@ -62,3 +62,4 @@ If you use RDAT Copilot in your research or professional workflow, please cite i
 This application does not include any telemetry or cloud-uploading code. The compiler-enforced BannedApiAnalyzers prevent HttpClient usage within the core logic, ensuring your translation data stays on your local hardware.
 
 Built with ❤️ for the Arabic Translation Community by Dr. Waleed Mandour.
+
