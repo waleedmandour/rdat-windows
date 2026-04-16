@@ -37,7 +37,7 @@ public sealed class AmtaLinterService : IAmtaLinterService
     private bool _isBuilt;
     private readonly ReaderWriterLockSlim _buildLock = new();
     private List<GlossaryEntry> _glossary = new();
-    private readonly string? _glossaryPath;
+    private string? _glossaryPath;
 
     // Configuration
     public bool AutoCorrectEnabled { get; set; } = true;

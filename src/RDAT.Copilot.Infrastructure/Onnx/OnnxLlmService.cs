@@ -65,7 +65,7 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
             var prompt = BuildTranslationPrompt(sourceText, sourceLang, targetLang);
             using var tokens = tokenizer.Encode(prompt);
             using var generatorParams = new GeneratorParams(model);
-            generatorParams.SetSearchOption("max_length", tokens.SequenceLength + DefaultMaxStreamingTokens);
+            generatorParams.SetSearchOption("max_length", DefaultMaxStreamingTokens);
             generatorParams.SetInputSequences(tokens);
 
             using var generator = new Generator(model, generatorParams);
@@ -111,7 +111,7 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
             using var tokens = tokenizer.Encode(prompt);
             using var generatorParams = new GeneratorParams(model);
 
-            generatorParams.SetSearchOption("max_length", tokens.SequenceLength + DefaultMaxNewTokens);
+            generatorParams.SetSearchOption("max_length", DefaultMaxNewTokens);
             generatorParams.SetSearchOption("top_p", 1.0);
             generatorParams.SetSearchOption("top_k", 1);
             generatorParams.SetSearchOption("temperature", 0.0);
