@@ -46,7 +46,6 @@ public sealed class GhostTextCoordinator : IDisposable
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _linterService = linterService ?? throw new ArgumentNullException(nameof(linterService));
 
-        _keystrokeSubject.Subscribe(OnKeystrokeReceived);
         _debounceTimer = new Timer(async _ =>
         {
             if (DateTimeOffset.UtcNow - _lastKeystroke >= _debounceInterval)
