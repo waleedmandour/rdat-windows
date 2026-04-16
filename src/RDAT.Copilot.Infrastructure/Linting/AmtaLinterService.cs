@@ -1,97 +1,283 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+// ========================================================================
+// RDAT Copilot - AMTA Glossary Linter (Aho-Corasick)
+// Location: src/RDAT.Copilot.Infrastructure/Linting/AmtaLinterService.cs
+// ========================================================================
+// High-performance terminology enforcement using the Aho-Corasick algorithm.
+// Builds a finite state machine from forbidden terms + known mistranslations,
+// enabling O(n) multi-pattern matching of every AI prediction.
+//
+// Privacy: 100% offline - no network calls.
+// ========================================================================
+
+using System.Collections.Concurrent;
 using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
+using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;
-using RDAT.Copilot.Core.Services;
 
 namespace RDAT.Copilot.Infrastructure.Linting;
 
 /// <summary>
-/// A high-performance string matching engine utilizing a compiled Regex 
-/// mimicking Aho-Corasick behavior for rapid multi-keyword detection.
+/// Aho-Corasick automaton node for multi-pattern string matching.
+/// </summary>
+internal sealed class AhoNode
+{
+    public Dictionary<char, AhoNode> Children { get; } = new();
+    public AhoNode? Failure { get; set; }
+    public AhoNode? DictSuffix { get; set; }
+    public List<GlossaryEntry>? Output { get; set; }
+    public int Depth { get; set; }
+}
+
+/// <summary>
+/// High-performance AMTA glossary linter using Aho-Corasick for O(n+m)
+/// multi-pattern matching. Thread-safe via ReaderWriterLockSlim.
 /// </summary>
 public sealed class AmtaLinterService : IAmtaLinterService
 {
-    private readonly object _syncRoot = new();
-    private Dictionary<string, string> _glossaryMap = new(StringComparer.OrdinalIgnoreCase);
-    private Regex? _searchRegex;
-    private GlossaryInfo _loadedInfo = new("None", 0, DateTime.MinValue);
+    private AhoNode _root = new();
+    private bool _isBuilt;
+    private readonly ReaderWriterLockSlim _buildLock = new();
+    private List<GlossaryEntry> _glossary = new();
+    private readonly string? _glossaryPath;
 
-    public async ValueTask LoadGlossaryAsync(string glossaryPath, CancellationToken cancellationToken = default)
+    // Configuration
+    public bool AutoCorrectEnabled { get; set; } = true;
+    public bool SuppressOnViolation { get; set; } = true;
+    public int MaxCorrectionsPerSuggestion { get; set; } = 10;
+
+    public event Action<GlossaryViolation>? OnViolationDetected;
+    public int GlossaryCount => _glossary.Count;
+
+    public async Task LoadGlossaryAsync(string glossaryPath, CancellationToken ct = default)
     {
-        if (!File.Exists(glossaryPath))
-            return;
-
-        using var stream = File.OpenRead(glossaryPath);
-        var entries = await JsonSerializer.DeserializeAsync<Dictionary<string, string>>(stream, cancellationToken: cancellationToken);
-        
-        if (entries == null) return;
-
-        lock (_syncRoot)
-        {
-            _glossaryMap = new Dictionary<string, string>(entries, StringComparer.OrdinalIgnoreCase);
-            
-            // Build a compiled Regex for Aho-Corasick like O(N) multi-pattern matching
-            // Escapes terms to prevent regex injection
-            var pattern = string.Join("|", _glossaryMap.Keys.Select(k => $@"\b{Regex.Escape(k)}\b"));
-            _searchRegex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-            _loadedInfo = new GlossaryInfo(Path.GetFileName(glossaryPath), _glossaryMap.Count, DateTime.UtcNow);
-        }
+        _glossaryPath = glossaryPath;
+        await Task.Run(() => InitializeGlossary(glossaryPath), ct);
     }
 
-    public LintResult Lint(string translationText, string languagePair)
+    public LintResult Lint(string suggestion)
     {
-        var regex = _searchRegex;
-        if (string.IsNullOrWhiteSpace(translationText) || regex == null)
-            return LintResult.Pass;
+        if (string.IsNullOrWhiteSpace(suggestion))
+            return new LintResult { IsClean = true };
 
-        var violations = new List<GlossaryViolation>();
-        var matches = regex.Matches(translationText);
+        EnsureBuilt();
+        var violations = Scan(suggestion);
+        var result = new LintResult { IsClean = violations.Count == 0, Violations = violations };
 
-        foreach (Match match in matches)
+        foreach (var v in violations)
+            OnViolationDetected?.Invoke(v);
+
+        return result;
+    }
+
+    public bool TryAutoCorrect(ref string suggestion, out string corrected)
+    {
+        if (string.IsNullOrWhiteSpace(suggestion))
         {
-            if (_glossaryMap.TryGetValue(match.Value, out var requiredTerm))
+            corrected = suggestion;
+            return false;
+        }
+
+        EnsureBuilt();
+        var violations = Scan(suggestion);
+        if (violations.Count == 0)
+        {
+            corrected = suggestion;
+            return false;
+        }
+
+        corrected = suggestion;
+        var sorted = violations.OrderByDescending(v => v.Length).ThenBy(v => v.StartIndex).ToList();
+        int offset = 0;
+        int count = 0;
+
+        foreach (var v in sorted)
+        {
+            if (count >= MaxCorrectionsPerSuggestion) break;
+            string replacement = v.Entry.Direction == "en->ar"
+                ? v.Entry.TargetTerm
+                : v.Entry.SourceTerm;
+            corrected = corrected.Remove(v.StartIndex + offset, v.Length)
+                .Insert(v.StartIndex + offset, replacement);
+            v.WasAutoCorrected = true;
+            offset += replacement.Length - v.Length;
+            count++;
+        }
+
+        return count > 0;
+    }
+
+    public LintResult LintAndCorrect(ref string suggestion)
+    {
+        var result = Lint(suggestion);
+        if (result.IsClean)
+        {
+            result.CorrectedText = suggestion;
+            return result;
+        }
+
+        if (AutoCorrectEnabled)
+        {
+            TryAutoCorrect(ref suggestion, out string corrected);
+            result.CorrectedText = corrected;
+            result.ShouldSuppress = false;
+        }
+        else if (SuppressOnViolation)
+        {
+            result.CorrectedText = null;
+            result.ShouldSuppress = true;
+        }
+        else
+        {
+            result.CorrectedText = suggestion;
+            result.ShouldSuppress = false;
+        }
+
+        return result;
+    }
+
+    public void ReloadGlossary()
+    {
+        if (_glossaryPath is null) return;
+        _buildLock.EnterWriteLock();
+        try
+        {
+            _isBuilt = false;
+            _glossary.Clear();
+            _root = new AhoNode();
+            InitializeGlossary(_glossaryPath);
+        }
+        finally { _buildLock.ExitWriteLock(); }
+    }
+
+    // ====================================================================
+    // Aho-Corasick Construction
+    // ====================================================================
+
+    private void InitializeGlossary(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        var json = File.ReadAllText(path);
+        var entries = JsonSerializer.Deserialize<List<GlossaryEntry>>(json,
+            new JsonSerializerOptions
             {
-                // A violation occurs if the text uses a forbidden term but we have a preferred one
-                // Wait, the logic request: "If user's glossary says Bank -> مصرف and AI suggests بنك, linter must detect."
-                // Since this requires synonyms mapped to forbidden terms, our JSON structure maps Forbidden -> Required.
-                // i.e., "بنك" -> "مصرف".
-                violations.Add(new GlossaryViolation(match.Value, requiredTerm, match.Index, match.Length, ViolationSeverity.Error));
+                PropertyNameCaseInsensitive = true,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder
+                    .Create(System.Text.Unicode.UnicodeRanges.All)
+            });
+
+        if (entries is null) return;
+        _glossary = entries;
+    }
+
+    private void EnsureBuilt()
+    {
+        if (_isBuilt) return;
+        _buildLock.EnterUpgradeableReadLock();
+        try { if (!_isBuilt) BuildAutomaton(); }
+        finally { _buildLock.ExitUpgradeableReadLock(); }
+    }
+
+    private void BuildAutomaton()
+    {
+        _root = new AhoNode();
+        foreach (var entry in _glossary)
+        {
+            AddPattern(entry, entry.ForbiddenTerm ?? entry.SourceTerm);
+            if (entry.KnownMistranslations is not null)
+                foreach (var mt in entry.KnownMistranslations)
+                    AddPattern(entry, mt);
+        }
+
+        // BFS failure links
+        var queue = new Queue<AhoNode>();
+        foreach (var c in _root.Children.Values) { c.Failure = _root; queue.Enqueue(c); }
+
+        while (queue.Count > 0)
+        {
+            var cur = queue.Dequeue();
+            foreach (var (ch, child) in cur.Children)
+            {
+                var fail = cur.Failure;
+                while (fail is not null && !fail.Children.ContainsKey(ch))
+                    fail = fail.Failure;
+                child.Failure = fail?.Children.GetValueOrDefault(ch) ?? _root;
+                if (child.Failure?.Output is { Count: > 0 })
+                    child.DictSuffix = child.Failure;
+                queue.Enqueue(child);
             }
         }
-
-        if (violations.Count == 0)
-            return LintResult.Pass;
-
-        return new LintResult(false, violations);
+        _isBuilt = true;
     }
 
-    public string? TryAutoCorrect(string translationText, string languagePair, IReadOnlyList<GlossaryViolation> violations)
+    private void AddPattern(GlossaryEntry entry, string term)
     {
-        if (string.IsNullOrWhiteSpace(translationText) || violations == null || violations.Count == 0)
-            return null;
-
-        // Auto-correct by replacing forbidden terms with required terms from end to start to prevent offset shifts
-        var correctedText = translationText;
-        foreach (var v in violations.OrderByDescending(v => v.StartIndex))
+        if (string.IsNullOrEmpty(term)) return;
+        var node = _root;
+        foreach (var ch in term)
         {
-            correctedText = correctedText.Remove(v.StartIndex, v.Length).Insert(v.StartIndex, v.RequiredTerm);
+            if (!node.Children.TryGetValue(ch, out var child))
+            {
+                child = new AhoNode { Depth = node.Depth + 1 };
+                node.Children[ch] = child;
+            }
+            node = child;
         }
-
-        return correctedText;
+        node.Output ??= new List<GlossaryEntry>();
+        node.Output.Add(entry);
     }
 
-    public GlossaryInfo GetLoadedGlossaryInfo()
+    // ====================================================================
+    // Scanning
+    // ====================================================================
+
+    private List<GlossaryViolation> Scan(string text)
     {
-        lock (_syncRoot)
+        var violations = new List<GlossaryViolation>();
+        var cur = _root;
+
+        for (int i = 0; i < text.Length; i++)
         {
-            return _loadedInfo;
+            char ch = text[i];
+            while (cur != _root && !cur.Children.ContainsKey(ch))
+                cur = cur.Failure!;
+            cur = cur.Children.TryGetValue(ch, out var child) ? child : _root;
+
+            for (var outNode = cur; outNode is not null; outNode = outNode.DictSuffix)
+            {
+                if (outNode.Output is null) continue;
+                foreach (var entry in outNode.Output)
+                {
+                    int len = outNode.Depth;
+                    int start = i - len + 1;
+                    violations.Add(new GlossaryViolation
+                    {
+                        Entry = entry,
+                        ForbiddenTerm = text.Substring(start, len),
+                        StartIndex = start,
+                        Length = len
+                    });
+                }
+            }
         }
+        return Deduplicate(violations);
     }
+
+    private static List<GlossaryViolation> Deduplicate(List<GlossaryViolation> v)
+    {
+        if (v.Count <= 1) return v;
+        v.Sort((a, b) => a.StartIndex != b.StartIndex
+            ? a.StartIndex.CompareTo(b.StartIndex)
+            : b.Length.CompareTo(a.Length));
+        var result = new List<GlossaryViolation>();
+        int lastEnd = -1;
+        foreach (var vi in v)
+        {
+            if (vi.StartIndex >= lastEnd)
+            { result.Add(vi); lastEnd = vi.StartIndex + vi.Length; }
+        }
+        return result;
+    }
+
+    public void Dispose() => _buildLock.Dispose();
 }

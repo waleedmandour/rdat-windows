@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RDAT Monaco Editor</title>
+    <style>
+        /* ================================================================
+           RDAT Copilot - Monaco Editor Host Page
+           ================================================================
+           This HTML page is loaded into the WinUI 3 WebView2 control.
+           It hosts the Monaco Editor and provides the RTL-aware ghost
+           text styling that cannot be injected via C# alone.
+
+           Key RTL considerations:
+           - The editor container uses CSS direction:rtl when active
+           - Ghost text uses unicode-bidi for proper Arabic rendering
+           - Cursor position is adjusted to prevent "jumping" artifacts
+           - Line numbers reposition to the right side in RTL mode
+           ================================================================ */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Arabic Typesetting', Tahoma, sans-serif;
+        }
+
+        /* Ghost text overlay - "Google-like" inline suggestions */
+        .rdat-ghost-inline {
+            color: rgba(140, 140, 140, 0.55);
+            font-style: italic;
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.12s ease-in-out;
+        }
+
+        .rdat-ghost-inline:hover {
+            opacity: 0.85;
+        }
+
+        /* RTL-specific ghost text styling */
+        .rdat-ghost-inline[dir="rtl"] {
+            direction: rtl;
+            unicode-bidi: bidi-override;
+            text-align: right;
+            font-family: 'Segoe UI', 'Arabic Typesetting', 'Simplified Arabic', sans-serif;
+            /* BiDi cursor anchor: thin blue left border in RTL */
+            border-left: 2px solid rgba(100, 149, 237, 0.45);
+            padding-left: 3px;
+        }
+
+        .rdat-ghost-inline[dir="ltr"] {
+            direction: ltr;
+            text-align: left;
+            font-family: 'Cascadia Code', 'Consolas', monospace;
+            /* LTR cursor anchor: thin blue right border */
+            border-right: 2px solid rgba(100, 149, 237, 0.45);
+            padding-right: 3px;
+        }
+
+        /* RTL editor mode - adjusts Monaco's layout direction */
+        .monaco-editor.rdat-rtl-mode {
+            direction: rtl;
+        }
+
+        .monaco-editor.rdat-rtl-mode .view-lines {
+            direction: rtl;
+            text-align: right;
+        }
+
+        .monaco-editor.rdat-rtl-mode .line-numbers {
+            direction: ltr;
+            text-align: left;
+        }
+
+        /* Scrollbar positioning fix for RTL */
+        .monaco-editor.rdat-rtl-mode .scroll-decoration {
+            right: 14px;
+            left: auto;
+        }
+
+        /* Loading overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        #loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(100, 149, 237, 0.2);
+            border-top-color: #6495ED;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #ccc;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+
+        #editor-container {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Editor...</div>
+    </div>
+    <div id="editor-container"></div>
+
+    <!-- Monaco Editor AMD Loader -->
+    <script src="ms-appx:///Assets/monaco-editor/min/vs/loader.js"></script>
+
+    <script>
+        // ================================================================
+        // RDAT Copilot - Monaco Editor Bootstrap
+        // ================================================================
+        require.config({
+            paths: {
+                'vs': 'ms-appx:///Assets/monaco-editor/min/vs'
+            }
+        });
+
+        // Arabic language definition for Monaco (basic tokenization)
+        require(['vs/editor/editor.main'], function () {
+            // Register Arabic language support
+            monaco.languages.register({ id: 'arabic-translation' });
+
+            monaco.languages.setMonarchTokensProvider('arabic-translation', {
+                tokenizer: {
+                    root: [
+                        // Arabic text: any sequence of Arabic Unicode chars
+                        [/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+/,
+                            'string'],
+                        // English words
+                        [/[a-zA-Z]+/, 'keyword'],
+                        // Numbers
+                        [/[0-9]+/, 'number'],
+                        // Punctuation
+                        [/[.,;:!?،؟]/, 'delimiter'],
+                    ]
+                }
+            });
+
+            // Theme: RDAT Dark (optimized for translation work)
+            monaco.editor.defineTheme('rdat-dark', {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    { token: 'keyword', foreground: '6495ED', fontStyle: 'bold' },
+                    { token: 'string', foreground: 'CE9178' },
+                    { token: 'number', foreground: 'B5CEA8' },
+                    { token: 'delimiter', foreground: '808080' },
+                ],
+                colors: {
+                    'editor.background': '#1E1E1E',
+                    'editor.foreground': '#D4D4D4',
+                    'editorCursor.foreground': '#6495ED',
+                    'editor.selectionBackground': '#264F78',
+                    'editor.lineHighlightBackground': '#2A2D2E',
+                    'editorLineNumber.foreground': '#858585',
+                    'editorLineNumber.activeForeground': '#C6C6C6',
+                    'editor.inactiveSelectionBackground': '#3A3D41',
+                    'editorIndentGuide.background': '#404040',
+                    'editorBracketMatch.background': '#0064001A',
+                    'editorBracketMatch.border': '#888888',
+                }
+            });
+
+            // Create editor instance
+            var editor = monaco.editor.create(document.getElementById('editor-container'), {
+                value: '',
+                language: 'arabic-translation',
+                theme: 'rdat-dark',
+                fontSize: 14,
+                fontFamily: "'Segoe UI', 'Arabic Typesetting', 'Cascadia Code', monospace",
+                lineNumbers: 'on',
+                wordWrap: 'on',
+                wordWrapColumn: 80,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                renderLineHighlight: 'all',
+                smoothScrolling: true,
+                cursorBlinking: 'smooth',
+                cursorSmoothCaretAnimation: 'on',
+                bracketPairColorization: { enabled: true },
+                guides: { bracketPairs: true },
+                padding: { top: 8, bottom: 8 },
+                automaticLayout: true,
+                // RTL-specific defaults
+                direction: 'ltr',
+            });
+
+            // Hide loading overlay
+            document.getElementById('loading-overlay').classList.add('hidden');
+
+            // Notify C# bridge that Monaco is ready
+            if (window.rdatMonacoReady) {
+                window.rdatMonacoReady(editor);
+            }
+
+            // Register keyboard shortcuts for ghost text
+            editor.addAction({
+                id: 'rdat-accept-ghost',
+                label: 'Accept Ghost Text',
+                keybindings: [monaco.KeyMod.Tab],
+                run: function () {
+                    // Handled by the bridge script
+                }
+            });
+
+            editor.addAction({
+                id: 'rdat-reject-ghost',
+                label: 'Reject Ghost Text',
+                keybindings: [monaco.KeyCode.Escape],
+                run: function () {
+                    // Handled by the bridge script
+                }
+            });
+        });
+    </script>
+</body>
+</html>

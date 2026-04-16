@@ -1,0 +1,83 @@
+<Page
+    x:Class="RDAT.Copilot.App.Views.AboutPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:RDAT.Copilot.App.Views"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <ScrollViewer Padding="48,32" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="640" HorizontalAlignment="Left" Spacing="16">
+
+            <!-- App icon & name -->
+            <StackPanel Spacing="4">
+                <FontIcon Glyph="&#xE945;" FontSize="48" HorizontalAlignment="Left"/>
+                <TextBlock Text="RDAT Copilot" Style="{StaticResource TitleTextBlockStyle}" FontSize="28" FontWeight="Bold"/>
+                <TextBlock Text="Research-Grade Desktop AI Translator" Style="{StaticResource SubtitleTextBlockStyle}" Opacity="0.7"/>
+            </StackPanel>
+
+            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+            <!-- Version info -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Version" FontWeight="SemiBold" Opacity="0.8"/>
+                <TextBlock Text="0.1.0-alpha" Opacity="0.6"/>
+            </StackPanel>
+
+            <!-- Description -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Description" FontWeight="SemiBold" Opacity="0.8"/>
+                <TextBlock TextWrapping="Wrap" LineHeight="28" Opacity="0.8">
+                    RDAT Copilot is a research-grade translation environment that combines
+                    Translation Memory (TM) leverage, AI-powered predictive typing via
+                    ghost-text suggestions, and terminology management into a single
+                    desktop application built on WinUI 3.
+                </TextBlock>
+            </StackPanel>
+
+            <!-- Features -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Key Features" FontWeight="SemiBold" Opacity="0.8"/>
+                <StackPanel Spacing="8" Margin="0,4,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE73E;" FontSize="14" Opacity="0.6"/>
+                        <TextBlock Text="Side-by-side bilingual editor with Monaco-based source/target panes" Opacity="0.7"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE73E;" FontSize="14" Opacity="0.6"/>
+                        <TextBlock Text="Translation Memory search with fuzzy matching and score display" Opacity="0.7"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE73E;" FontSize="14" Opacity="0.6"/>
+                        <TextBlock Text="Terminology glossary management with domain tagging" Opacity="0.7"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE73E;" FontSize="14" Opacity="0.6"/>
+                        <TextBlock Text="RTL/LTR bidirectional text support" Opacity="0.7"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+
+            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+            <!-- Privacy guarantee -->
+            <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE72E;" FontSize="16" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                    <TextBlock Text="Privacy Guarantee" FontWeight="SemiBold"/>
+                </StackPanel>
+                <TextBlock TextWrapping="Wrap" LineHeight="28" Opacity="0.8" Margin="24,0,0,0">
+                    RDAT Copilot is designed as a fully offline, privacy-first translation tool.
+                    All translation memory data, glossary entries, and document content remain
+                    on your local machine. No text is sent to external servers or cloud APIs.
+                    AI predictions are generated locally using on-device models.
+                </TextBlock>
+            </StackPanel>
+
+            <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+            <!-- License -->
+            <TextBlock Text="© 2025 RDAT Project. All rights reserved." Opacity="0.4" FontSize="12"/>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

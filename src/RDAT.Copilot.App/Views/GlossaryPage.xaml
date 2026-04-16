@@ -1,0 +1,65 @@
+<Page
+    x:Class="RDAT.Copilot.App.Views.GlossaryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:RDAT.Copilot.App.Views"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid Padding="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="Terminology Glossary" Style="{StaticResource TitleTextBlockStyle}" Margin="0,0,0,8"/>
+
+        <!-- Action buttons -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+            <Button x:Name="AddEntryButton" Click="AddEntryButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE710;" FontSize="14"/>
+                    <TextBlock Text="Add"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="EditEntryButton" Click="EditEntryButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE70F;" FontSize="14"/>
+                    <TextBlock Text="Edit"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="DeleteEntryButton" Click="DeleteEntryButton_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE74D;" FontSize="14"/>
+                    <TextBlock Text="Delete"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <!-- Glossary DataGrid -->
+        <Microsoft.UI.Xaml.Controls.DataGrid
+            Grid.Row="2"
+            x:Name="GlossaryDataGrid"
+            AutoGenerateColumns="False"
+            IsReadOnly="True"
+            SelectionMode="Single"
+            CanUserSortColumns="True"
+            AlternatingRowBackground="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+            BorderThickness="1"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
+
+            <Microsoft.UI.Xaml.Controls.DataGrid.Columns>
+                <Microsoft.UI.Xaml.Controls.DataGridTextColumn
+                    Header="Source" Binding="{Binding Source}" Width="2*" Tag="Source"/>
+                <Microsoft.UI.Xaml.Controls.DataGridTextColumn
+                    Header="Target" Binding="{Binding Target}" Width="2*" Tag="Target"/>
+                <Microsoft.UI.Xaml.Controls.DataGridComboBoxColumn
+                    Header="Direction" Width="*"
+                    Tag="Direction"/>
+                <Microsoft.UI.Xaml.Controls.DataGridTextColumn
+                    Header="Domain" Binding="{Binding Domain}" Width="*" Tag="Domain"/>
+            </Microsoft.UI.Xaml.Controls.DataGrid.Columns>
+        </Microsoft.UI.Xaml.Controls.DataGrid>
+    </Grid>
+</Page>
