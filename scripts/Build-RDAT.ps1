@@ -92,9 +92,10 @@ dotnet publish $MainProject `
     -p:PublishReadyToRun=true `
     -p:PublishSingleFile=false `
     -p:WindowsPackageType=None `
+    -p:Platform=x64 `
     -p:DebugType=None `
     -p:DebugSymbols=false `
-    --verbosity minimal
+    --verbosity normal
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "       ERROR: Publish failed." -ForegroundColor Red
