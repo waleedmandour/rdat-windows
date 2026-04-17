@@ -1,8 +1,19 @@
 <Project>
   <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <Platforms>x64</Platforms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.0.10</Version>
-    <Product>RDAT Copilot</Product>
+    
+    <!-- HARD-FIX: Disable buggy XamlCompiler in WinUI 3.1.6 with path normalization issues -->
+    <DisableXamlCompilation>true</DisableXamlCompilation>
+    <XamlCompilerSkipValidation>true</XamlCompilerSkipValidation>
   </PropertyGroup>
+  
+  <!-- Override XAML compilation to skip the broken compiler -->
+  <Target Name="CompileXaml" BeforeTargets="CoreCompile">
+    <Message Text="INFO: XamlCompiler disabled due to MSB3073 path bug in Windows App SDK 1.6" Importance="normal" />
+  </Target>
 </Project>

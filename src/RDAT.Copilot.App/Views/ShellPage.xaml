@@ -1,4 +1,4 @@
-<Page
+﻿<Page
     x:Class="RDAT.Copilot.App.Views.ShellPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -61,7 +61,8 @@
 
         <TeachingTip x:Name="WelcomeTip"
             Title="Welcome to RDAT Copilot"
-            Subtitle="Open a .docx file to begin. AI predictions appear as ghost text - press Tab to accept or Esc to reject."
-            Target="{x:Bind NavView}" IsOpen="False" CloseButtonContent="Got it"/>
+            Subtitle="Open a .docx file to begin. Press Tab to accept predictions."
+            IsOpen="False" 
+            CloseButtonContent="Got it"/>
     </Grid>
 </Page>

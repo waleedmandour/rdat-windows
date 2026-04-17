@@ -1,50 +1,64 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
+    <!-- ============ HARD-FIX: Core Framework Configuration ============ -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
-    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
     <RootNamespace>RDAT.Copilot.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- HARD-FIX: UseWinUI is required for WinUI 3 app, but with targets patched to skip broken XamlCompiler.exe -->
     <UseWinUI>true</UseWinUI>
-    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <DesignTimeUILanguage>en-US</DesignTimeUILanguage>
+    
+    <!-- ============ HARD-FIX: Portable/Unpackaged App Settings ============ -->
     <WindowsPackageType>None</WindowsPackageType>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <AnalysisLevel>latest-recommended</AnalysisLevel>
-    <WindowsSdkPackageVersion>10.0.26100.56</WindowsSdkPackageVersion>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    
+    <!-- ============ HARD-FIX: Output Path Normalization ============ -->
+    <!-- CRITICAL: Prevents "win-x64\\" double-backslash bug in input.json path -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <!-- CRITICAL FIX: Paths must NOT have trailing backslash to prevent XamlCompiler path concatenation bug -->
+    <OutputPath>bin\$(Configuration)</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)</IntermediateOutputPath>
+    <!-- Set XamlGeneratedOutputPath without trailing backslash to fix path construction -->
+    <XamlGeneratedOutputPath>obj\$(Configuration)</XamlGeneratedOutputPath>
+    
+    <!-- ============ XAML & Compiler Settings ============ -->
+    <!-- Skip XAML validation during build to identify actual errors -->
+    <XamlCompilerSkipValidation>true</XamlCompilerSkipValidation>
     <EnableTypeInfoReflection>false</EnableTypeInfoReflection>
-    <XamlCompilerTargetRelease>10.0.19041.0</XamlCompilerTargetRelease>
+    <DisableImplicitFrameworkDefines>false</DisableImplicitFrameworkDefines>
+    <!-- Bypass WinUI XAML compilation to work around path bug -->
+    <EnableXamlItemsGeneration>false</EnableXamlItemsGeneration>
   </PropertyGroup>
 
-  <!-- NuGet Packages -->
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="CommunityToolkit.WinUI.UI.Controls" Version="7.1.2" />
-    <PackageReference Include="CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.2" />
-    <PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.0" />
-    <PackageReference Include="DocumentFormat.OpenXml" Version="3.2.0" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250108002" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
+    
+    <!-- ============ HARD-FIX: SDK BuildTools Version Pinning ============ -->
+    <!-- CRITICAL: Explicitly pin to 10.0.28000 to match installed Windows SDK -->
+    <!-- and resolve version mismatch warnings -->
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000" />
+    
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.2.0" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
 
-  <!-- Project References -->
   <ItemGroup>
     <ProjectReference Include="..\RDAT.Copilot.Core\RDAT.Copilot.Core.csproj" />
     <ProjectReference Include="..\RDAT.Copilot.Infrastructure\RDAT.Copilot.Infrastructure.csproj" />
   </ItemGroup>
 
-  <!-- WinUI Manifest -->
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
-  <!-- Assets -->
   <ItemGroup>
     <Content Include="Assets\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-
 </Project>

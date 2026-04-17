@@ -1,15 +1,13 @@
-// ========================================================================
-// RDAT Copilot - App.xaml.cs (Entry Point)
-// Location: src/RDAT.Copilot.App/App.xaml.cs
-// ========================================================================
-
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
-using RDAT.Copilot.App.Bridges;
-using RDAT.Copilot.App.Hosting;
+using System;
+using System.IO;
+// This alias is critical: it prevents the compiler from confusing 
+// System.IO.Path with Microsoft.UI.Xaml.Shapes.Path
+using Path = System.IO.Path; 
+
 using RDAT.Copilot.App.ViewModels;
 using RDAT.Copilot.App.Views;
-using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Services;
 using RDAT.Copilot.Infrastructure.LanceDb;
 using RDAT.Copilot.Infrastructure.Linting;
@@ -20,13 +18,22 @@ namespace RDAT.Copilot.App;
 public partial class App : Application
 {
     private static Window? _mainWindow;
+    
+    /// <summary>
+    /// Static access to the main window.
+    /// </summary>
     public static Window MainWindow => _mainWindow!;
+    
+    /// <summary>
+    /// Centralized Service Provider for Dependency Injection.
+    /// </summary>
     public static IServiceProvider Services { get; private set; } = null!;
-    public static bool IsFirstLaunch { get; set; } = true;
 
     public App()
     {
+        // InitializeComponent must be called first for XAML loading
         this.InitializeComponent();
+        
         this.UnhandledException += App_UnhandledException;
         ConfigureServices();
     }
@@ -35,59 +42,43 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
-        // Logging
-        services.AddLogging(builder => builder.AddDebug());
-
-        // Core Services
+        // 1. Core AI Services (Backend)
         services.AddSingleton<IAmtaLinterService, AmtaLinterService>();
         services.AddSingleton<ISemanticTmService, LanceDbTmService>();
         services.AddSingleton<ILlmInferenceService, OnnxLlmService>();
         services.AddSingleton<GhostTextCoordinator>();
 
-        // Infrastructure
-        services.AddSingleton<IEditorBridge, EditorBridge>();
-
-        // App Services
-        services.AddSingleton<IHardwareService, HardwareService>();
-        services.AddSingleton<StartupService>();
-
-        // ViewModels
+        // 2. ViewModels (Frontend Logic)
         services.AddTransient<TranslationViewModel>();
+
+        // Note: StartupService and HardwareService are removed for now 
+        // to ensure a clean first build. We will add them once the .exe runs.
 
         Services = services.BuildServiceProvider();
     }
 
-    protected override async void OnLaunched(LaunchActivatedEventArgs args)
-    {
-        _mainWindow = new MainWindow();
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
+{
+    _mainWindow = new MainWindow();
+    _mainWindow.Content = new ShellPage();
+    _mainWindow.Activate();
+}
 
-        // Run startup sequence (hardware check, model warm-up)
+    private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+    {
+        // Prevent the app from crashing immediately, try to log the error
+        e.Handled = true;
         try
         {
-            var startup = Services.GetRequiredService<StartupService>();
-            await startup.InitializeAsync();
+            var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RDAT", "Logs");
+            if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
+            
+            var logPath = Path.Combine(logDir, $"error-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+            File.WriteAllText(logPath, e.Exception.ToString() + "\n" + e.Message);
         }
-        catch (System.Exception ex)
+        catch 
         {
-            System.Diagnostics.Debug.WriteLine($"Startup failed: {ex.Message}");
-            // Continue to show UI even if startup fails
+            // If logging fails, there's nothing more we can do
         }
-
-        _mainWindow.Content = new ShellPage();
-        _mainWindow.Title = "RDAT Copilot - Research Translation Assistant";
-        _mainWindow.Activate();
-    }
-
-    private void App_UnhandledException(object sender,
-        Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
-    {
-        e.Handled = true;
-        var logDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "RDAT", "Logs");
-        Directory.CreateDirectory(logDir);
-        File.WriteAllText(
-            Path.Combine(logDir, $"error-{DateTime.Now:yyyyMMdd-HHmmss}.log"),
-            $"[{DateTime.Now:O}] {e.Exception}\n{e.Exception.StackTrace}");
     }
 }
