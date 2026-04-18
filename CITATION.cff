@@ -1,0 +1,53 @@
+cff-version: 1.2.0
+title: "RDAT Copilot: AI-Powered Translation & Document Analysis Tool"
+abstract: "RDAT Copilot is an advanced AI-powered document translation and analysis tool built with .NET 8 and WinUI 3. The application leverages ONNX-based machine learning models to provide intelligent document processing, terminology management, and real-time translation suggestions for professional translators and language professionals."
+authors:
+  - family-names: "Mandour"
+    given-names: "Waleed"
+    affiliation: "Sultan Qaboos University"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+version: "1.1.0-rc1"
+date-released: "2026-04-18"
+license: "MIT"
+repository-code: "https://github.com/waleedmandour/rdat-windows"
+repository-artifact: "https://github.com/waleedmandour/rdat-windows/releases"
+keywords:
+  - "translation"
+  - "artificial-intelligence"
+  - "machine-learning"
+  - "onnx"
+  - "neural-networks"
+  - "winui3"
+  - "dotnet8"
+  - "language-processing"
+  - "nlp"
+  - "terminology-management"
+  - "computer-assisted-translation"
+  - "language-technology"
+  - "document-processing"
+  - "neural-inference"
+  - "vector-search"
+references:
+  - type: software
+    title: "ONNX: Open Neural Network Exchange"
+    year: 2023
+    url: "https://onnx.ai"
+  - type: software
+    title: ".NET 8 Runtime"
+    year: 2023
+    url: "https://dotnet.microsoft.com"
+  - type: software
+    title: "Windows App SDK"
+    year: 2023
+    url: "https://learn.microsoft.com/windows/apps/windows-app-sdk"
+  - type: software
+    title: "WinUI 3"
+    year: 2023
+    url: "https://learn.microsoft.com/windows/apps/winui"
+message: "If you use RDAT Copilot in your research, please cite it as below."
+url: "https://github.com/waleedmandour/rdat-windows"
+contact:
+  - family-names: "Mandour"
+    given-names: "Waleed"
+    email: "waleedmandour@github.local"
+    affiliation: "Sultan Qaboos University"
