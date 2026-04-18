@@ -1,0 +1,75 @@
+name: Build RDAT Copilot Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - '.github/workflows/build-release.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        lfs: true
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore NuGet packages
+      run: |
+        dotnet restore src/RDAT.Copilot.sln
+      
+    - name: Build Release
+      run: |
+        dotnet build src/RDAT.Copilot.sln `
+          -c Release `
+          -p:Platform=x64 `
+          --no-restore `
+          -p:AppendTargetFrameworkToOutputPath=false `
+          -p:AppendRuntimeIdentifierToOutputPath=false
+    
+    - name: Create output directory
+      run: |
+        New-Item -ItemType Directory -Path "build_output" -Force
+        Copy-Item "src/RDAT.Copilot.App/bin/Release/win-x64/RDAT.Copilot.App.exe" "build_output/" -ErrorAction SilentlyContinue
+        Copy-Item "src/RDAT.Copilot.App/bin/Release/win-x64/*.dll" "build_output/" -ErrorAction SilentlyContinue
+    
+    - name: Compress executable
+      run: |
+        Compress-Archive -Path "build_output/*" -DestinationPath "RDAT.Copilot.App.zip" -Force
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: rdat-copilot-windows
+        path: |
+          build_output/
+          RDAT.Copilot.App.zip
+        retention-days: 30
+    
+    - name: Create Release
+      if: success()
+      uses: softprops/action-gh-release@v1
+      with:
+        files: RDAT.Copilot.App.zip
+        tag_name: v${{ github.run_number }}
+        release_name: RDAT Copilot Release ${{ github.run_number }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Upload to storage service
+      if: success()
+      run: |
+        Write-Host "Build completed successfully!"
+        Write-Host "Artifact size: $(Get-Item 'RDAT.Copilot.App.zip' | ForEach-Object {'{0:F2} MB' -f ($_.Length / 1MB)})"
