@@ -43,13 +43,29 @@
             </NavigationView.Header>
 
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Translation Workspace" Tag="workspace" Icon="Document"/>
-                <NavigationViewItem Content="Translation Memory" Tag="tm" Icon="Library"/>
-                <NavigationViewItem Content="Terminology Glossary" Tag="glossary" Icon="Book"/>
+                <NavigationViewItem Content="Translation Workspace" Tag="workspace">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Document"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Translation Memory" Tag="tm">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8F1;" FontSize="16"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Terminology Glossary" Tag="glossary">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Book"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
 
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem Content="About" Tag="about" Icon="Help"/>
+                <NavigationViewItem Content="About" Tag="about">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Help"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.FooterMenuItems>
 
             <NavigationView.AutoSuggestBox>

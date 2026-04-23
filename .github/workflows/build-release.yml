@@ -49,9 +49,7 @@ jobs:
         dotnet build RDAT.Copilot.sln `
           -c ${{ env.CONFIGURATION }} `
           -p:Platform=x64 `
-          -p:XamlCompilerEnableDiagnostics=true `
-          --no-restore `
-          -v detailed 2>&1 | Select-String -Pattern "XamlCompiler|error|warning CS|MC[0-9]|WMC[0-9]" | Select-Object -Last 40
+          --no-restore
 
     - name: Publish Self-Contained Portable App
       run: |
