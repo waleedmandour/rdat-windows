@@ -1,52 +1,49 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- ============ HARD-FIX: Core Framework Configuration ============ -->
+    <!-- ============ Framework Configuration ============ -->
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <OutputType>WinExe</OutputType>
     <RootNamespace>RDAT.Copilot.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <!-- HARD-FIX: UseWinUI is required for WinUI 3 app, but with targets patched to skip broken XamlCompiler.exe -->
     <UseWinUI>true</UseWinUI>
     <DesignTimeUILanguage>en-US</DesignTimeUILanguage>
-    
-    <!-- ============ HARD-FIX: Portable/Unpackaged App Settings ============ -->
+
+    <!-- ============ Portable/Unpackaged App Settings ============ -->
     <WindowsPackageType>None</WindowsPackageType>
     <EnableMsixTooling>false</EnableMsixTooling>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-    
-    <!-- ============ HARD-FIX: Output Path Normalization ============ -->
-    <!-- CRITICAL: Prevents "win-x64\\" double-backslash bug in input.json path -->
+
+    <!-- ============ Output Path Configuration ============ -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <!-- CRITICAL FIX: Paths must NOT have trailing backslash to prevent XamlCompiler path concatenation bug -->
-    <OutputPath>bin\$(Configuration)</OutputPath>
-    <IntermediateOutputPath>obj\$(Configuration)</IntermediateOutputPath>
-    <!-- Set XamlGeneratedOutputPath without trailing backslash to fix path construction -->
-    <XamlGeneratedOutputPath>obj\$(Configuration)</XamlGeneratedOutputPath>
-    
-    <!-- ============ XAML & Compiler Settings ============ -->
-    <!-- Skip XAML validation during build to identify actual errors -->
-    <XamlCompilerSkipValidation>true</XamlCompilerSkipValidation>
-    <EnableTypeInfoReflection>false</EnableTypeInfoReflection>
-    <DisableImplicitFrameworkDefines>false</DisableImplicitFrameworkDefines>
-    <!-- Bypass WinUI XAML compilation to work around path bug -->
-    <EnableXamlItemsGeneration>false</EnableXamlItemsGeneration>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250108002" />
-    
-    <!-- ============ HARD-FIX: SDK BuildTools Version Pinning ============ -->
-    <!-- CRITICAL: Explicitly pin to 10.0.28000 to match installed Windows SDK -->
-    <!-- and resolve version mismatch warnings -->
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000" />
-    
+    <!-- ============ WinUI 3 SDK (1.5.3 - stable, no XamlCompiler crash) ============ -->
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.3" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621" />
+
+    <!-- ============ WebView2 for Monaco Editor ============ -->
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+
+    <!-- ============ MVVM Toolkit ============ -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+
+    <!-- ============ Document Processing ============ -->
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.2.0" />
+
+    <!-- ============ Reactive Extensions ============ -->
     <PackageReference Include="System.Reactive" Version="6.0.1" />
+
+    <!-- ============ Dependency Injection & Logging ============ -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+
+    <!-- ============ JSON Processing (for Gemini API) ============ -->
+    <PackageReference Include="System.Text.Json" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -52,7 +52,7 @@ window.initGhostTextFeatures = function(editor) {
     if (window.chrome && window.chrome.webview) {
         window.chrome.webview.addEventListener('message', (event) => {
             const data = event.data;
-            if (data.type === 'ghosTextResult') {
+            if (data.type === 'ghostTextResult') {
                 renderGhostText(data.text);
             } else if (data.type === 'setDirection') {
                 // Allows C# to toggle RTL

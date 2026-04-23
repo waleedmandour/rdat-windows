@@ -39,7 +39,7 @@ Write-Host ""
 
 # Step 4: Restore
 Write-Host "[4/5] Restoring NuGet packages..." -ForegroundColor Yellow
-dotnet restore src/RDAT.Copilot.App/RDAT.Copilot.App.csproj --verbosity minimal
+dotnet restore RDAT.Copilot.sln --verbosity minimal
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Restore failed!" -ForegroundColor Red
     exit 1
@@ -49,12 +49,10 @@ Write-Host ""
 
 # Step 5: Build
 Write-Host "[5/5] Building application ($Configuration)..." -ForegroundColor Yellow
-dotnet build src/RDAT.Copilot.App/RDAT.Copilot.App.csproj `
+dotnet build RDAT.Copilot.sln `
     -c $Configuration `
-    -f net8.0-windows10.0.19041.0 `
-    --runtime win-x64 `
-    --no-restore `
-    -v detailed
+    -p:Platform=x64 `
+    --no-restore
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Build failed!" -ForegroundColor Red
@@ -65,7 +63,4 @@ Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "BUILD SUCCESSFUL!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
-Write-Host ""
-Write-Host "Executable location:" -ForegroundColor Cyan
-Write-Host "  src\RDAT.Copilot.App\bin\$Configuration\net8.0-windows10.0.19041.0\win-x64\RDAT.Copilot.App.exe" -ForegroundColor Cyan
 Write-Host ""

@@ -3,7 +3,7 @@
 # Location: scripts/Build-RDAT.ps1
 # ========================================================================
 # Produces a self-contained portable .EXE distribution:
-#   RDAT-Copilot-Portable-v1.0.zip
+#   RDAT-Copilot-Portable-win-x64.zip
 #
 # Usage:
 #   .\Build-RDAT.ps1              # Build Release
@@ -17,7 +17,7 @@ param(
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64",
     [string]$Version = "1.0.0",
-    [string]$OutputName = "RDAT-Copilot-Portable-v$Version"
+    [string]$OutputName = "RDAT-Copilot-Portable-win-x64"
 )
 
 $ErrorActionPreference = "Stop"
@@ -111,7 +111,7 @@ foreach ($dll in $RequiredNativeDlls) {
     # Check if DLL exists anywhere in the publish directory
     $found = $false
     $dllPaths = @(Get-ChildItem -Path $PublishDir -Filter $dll -Recurse -File)
-    
+
     if ($dllPaths.Count -gt 0) {
         # If the DLL is in a subdirectory, copy it to the root
         $rootPath = Join-Path $PublishDir $dll
@@ -121,7 +121,7 @@ foreach ($dll in $RequiredNativeDlls) {
         }
         $found = $true
     }
-    
+
     if (-not $found) {
         $missingDlls += $dll
     }
@@ -158,10 +158,10 @@ if (Test-Path $OutputZip) {
 # Create ZIP using .NET compression
 if (Test-Path $PublishDir) {
     Compress-Archive -Path "$PublishDir\*" -DestinationPath $OutputZip -CompressionLevel Optimal
-    
+
     $zipSize = (Get-Item $OutputZip).Length / 1MB
     $fileCount = (Get-ChildItem -Path $PublishDir -Recurse -File).Count
-    
+
     Write-Host "       Package created: $OutputName.zip" -ForegroundColor Green
     Write-Host "       Size:  $([math]::Round($zipSize, 2)) MB" -ForegroundColor Green
     Write-Host "       Files: $fileCount" -ForegroundColor Green
@@ -179,8 +179,8 @@ Write-Host "  Output:    $OutputZip" -ForegroundColor White
 Write-Host "  Location:  $ProjectRoot" -ForegroundColor Gray
 Write-Host "" -ForegroundColor Gray
 Write-Host "  To run the application:" -ForegroundColor Gray
-Write-Host "    1. Extract RDAT-Copilot-Portable-v$Version.zip" -ForegroundColor Gray
-Write-Host "    2. Run RDAT.Copilot.exe" -ForegroundColor Gray
+Write-Host "    1. Extract $OutputName.zip" -ForegroundColor Gray
+Write-Host "    2. Run RDAT.Copilot.App.exe" -ForegroundColor Gray
 Write-Host "" -ForegroundColor Gray
 Write-Host "  Privacy: 100% offline. No telemetry." -ForegroundColor Gray
 Write-Host "  ====================================================" -ForegroundColor Cyan

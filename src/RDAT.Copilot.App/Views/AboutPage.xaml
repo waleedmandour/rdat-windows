@@ -20,7 +20,7 @@
             <!-- Version info -->
             <StackPanel Spacing="4">
                 <TextBlock Text="Version" FontWeight="SemiBold" Opacity="0.8"/>
-                <TextBlock Text="0.1.0-alpha" Opacity="0.6"/>
+                <TextBlock Text="1.0.0" Opacity="0.6"/>
             </StackPanel>
 
             <!-- Description -->
@@ -76,7 +76,7 @@
             <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
 
             <!-- License -->
-            <TextBlock Text="© 2025 RDAT Project. All rights reserved." Opacity="0.4" FontSize="12"/>
+            <TextBlock Text="© 2025-2026 RDAT Project. All rights reserved." Opacity="0.4" FontSize="12"/>
 
         </StackPanel>
     </ScrollViewer>

@@ -1,6 +1,5 @@
 using System;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml.Controls;
@@ -33,7 +32,6 @@ public sealed class EditorBridge : IEditorBridge
 
         // Subscribe to coordinator's ghost text stream and push results to Monaco
         _ghostTextSubscription = _coordinator.GhostTextStream
-            .ObserveOn(SynchronizationContext.Current ?? new SynchronizationContext())
             .Subscribe(OnGhostTextReceived, ex =>
             {
                 _logger.LogError(ex, "Error in ghost text stream subscription");
@@ -76,7 +74,7 @@ public sealed class EditorBridge : IEditorBridge
         {
             var payload = JsonSerializer.Serialize(new
             {
-                type = "ghosTextResult",
+                type = "ghostTextResult",
                 text = result?.Text ?? ""
             });
             _webView.CoreWebView2.PostWebMessageAsJson(payload);
@@ -170,13 +168,14 @@ public sealed class EditorBridge : IEditorBridge
         string targetText = root.TryGetProperty("target", out var tgt) ? tgt.GetString() ?? "" : "";
         string lang = root.TryGetProperty("lang", out var lng) ? lng.GetString() ?? "en-ar" : "en-ar";
 
+        // If lang starts with "en", the target is Arabic (RTL)
         bool isRtl = lang.StartsWith("en", StringComparison.OrdinalIgnoreCase);
 
         var keystroke = new EditorKeystroke
         {
             SourceText = sourceText,
             TargetText = targetText,
-            Language = isRtl ? "ar" : "en",
+            Language = lang,
             IsRtl = isRtl
         };
 

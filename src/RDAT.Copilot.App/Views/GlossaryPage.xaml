@@ -1,4 +1,4 @@
-﻿<Page
+<Page
     x:Class="RDAT.Copilot.App.Views.GlossaryPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -15,19 +15,19 @@
         <TextBlock Grid.Row="0" Text="Terminology Glossary" Style="{StaticResource TitleTextBlockStyle}" Margin="0,0,0,8"/>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-            <Button x:Name="AddEntryButton">
+            <Button x:Name="AddEntryButton" Click="AddEntryButton_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <FontIcon Glyph="&#xE710;" FontSize="14"/>
                     <TextBlock Text="Add"/>
                 </StackPanel>
             </Button>
-            <Button x:Name="EditEntryButton">
+            <Button x:Name="EditEntryButton" Click="EditEntryButton_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <FontIcon Glyph="&#xE70F;" FontSize="14"/>
                     <TextBlock Text="Edit"/>
                 </StackPanel>
             </Button>
-            <Button x:Name="DeleteEntryButton">
+            <Button x:Name="DeleteEntryButton" Click="DeleteEntryButton_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <FontIcon Glyph="&#xE74D;" FontSize="14"/>
                     <TextBlock Text="Delete"/>
@@ -35,9 +35,41 @@
             </Button>
         </StackPanel>
 
-        <Border Grid.Row="2" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
-            <TextBlock Text="Glossary Engine Ready - DataGrid Removed for Stability" 
-                       HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5"/>
-        </Border>
+        <ListView Grid.Row="2" x:Name="GlossaryListView"
+                  SelectionMode="Single"
+                  IsItemClickEnabled="True">
+
+            <ListView.Header>
+                <Grid Padding="8,4" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Source" FontWeight="SemiBold" Opacity="0.7"/>
+                    <TextBlock Grid.Column="1" Text="Target" FontWeight="SemiBold" Opacity="0.7"/>
+                    <TextBlock Grid.Column="2" Text="Direction" FontWeight="SemiBold" Opacity="0.7"/>
+                    <TextBlock Grid.Column="3" Text="Domain" FontWeight="SemiBold" Opacity="0.7"/>
+                </Grid>
+            </ListView.Header>
+
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="local:GlossaryDisplayItem">
+                    <Grid Padding="0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding Source}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Target}" TextWrapping="Wrap" FlowDirection="RightToLeft" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Direction}" VerticalAlignment="Center" Opacity="0.7"/>
+                        <TextBlock Grid.Column="3" Text="{Binding Domain}" VerticalAlignment="Center" Opacity="0.7"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
     </Grid>
 </Page>

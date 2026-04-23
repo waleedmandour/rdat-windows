@@ -3,7 +3,6 @@
 // Location: src/RDAT.Copilot.Core/Services/GhostTextCoordinator.cs
 // ========================================================================
 
-using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;
@@ -13,11 +12,13 @@ namespace RDAT.Copilot.Core.Services;
 /// <summary>
 /// Coordinates the ghost text prediction pipeline. Manages preemption,
 /// debouncing, and distributes predictions to subscribers.
+/// Falls back to Gemini cloud API when local ONNX inference is unavailable.
 /// </summary>
 public sealed class GhostTextCoordinator : IDisposable
 {
     private readonly ILlmInferenceService _llmService;
     private readonly IAmtaLinterService _linterService;
+    private readonly IGeminiService? _geminiService;
     private readonly Subject<GhostTextResult> _resultSubject = new();
     private readonly Subject<EditorKeystroke> _keystrokeSubject = new();
 
@@ -42,9 +43,18 @@ public sealed class GhostTextCoordinator : IDisposable
     public GhostTextCoordinator(
         ILlmInferenceService llmService,
         IAmtaLinterService linterService)
+        : this(llmService, linterService, null)
+    {
+    }
+
+    public GhostTextCoordinator(
+        ILlmInferenceService llmService,
+        IAmtaLinterService linterService,
+        IGeminiService? geminiService)
     {
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _linterService = linterService ?? throw new ArgumentNullException(nameof(linterService));
+        _geminiService = geminiService;
 
         _debounceTimer = new Timer(async _ =>
         {
@@ -81,7 +91,6 @@ public sealed class GhostTextCoordinator : IDisposable
     {
         if (_pendingKeystroke is null) return;
         if (string.IsNullOrWhiteSpace(_pendingKeystroke.SourceText)) return;
-        if (!_llmService.IsModelLoaded) return;
 
         var cts = new CancellationTokenSource();
         Interlocked.Exchange(ref _currentCts, cts)?.Cancel();
@@ -93,8 +102,26 @@ public sealed class GhostTextCoordinator : IDisposable
         try
         {
             IsGenerating = true;
-            var result = await _llmService.GetPredictionAsync(
-                keystroke.SourceText, "en", "ar", cts.Token);
+            GhostTextResult result;
+
+            // Try local ONNX inference first
+            if (_llmService.IsModelLoaded)
+            {
+                result = await _llmService.GetPredictionAsync(
+                    keystroke.SourceText, "en", "ar", cts.Token);
+            }
+            // Fall back to Gemini cloud API if configured
+            else if (_geminiService?.IsConfigured == true)
+            {
+                result = await _geminiService.GetPredictionAsync(
+                    keystroke.SourceText, "en", "ar", cts.Token);
+            }
+            else
+            {
+                // No inference available
+                IsGenerating = false;
+                return;
+            }
 
             if (!string.IsNullOrEmpty(result.Text))
             {

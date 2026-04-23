@@ -7,69 +7,111 @@ on:
     paths:
       - 'src/**'
       - '.github/workflows/build-release.yml'
+      - 'scripts/**'
   workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  CONFIGURATION: Release
 
 jobs:
   build:
+    name: Build Portable Windows Executable
     runs-on: windows-latest
-    
+
+    permissions:
+      contents: write
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         lfs: true
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
-    
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install WinUI 3 Workloads
+      run: dotnet workload install maui-windows --ignore-failed-sources
+
     - name: Restore NuGet packages
-      run: |
-        dotnet restore src/RDAT.Copilot.sln
-      
+      run: dotnet restore RDAT.Copilot.sln
+
     - name: Build Release
       run: |
-        dotnet build src/RDAT.Copilot.sln `
-          -c Release `
+        dotnet build RDAT.Copilot.sln `
+          -c ${{ env.CONFIGURATION }} `
           -p:Platform=x64 `
-          --no-restore `
-          -p:AppendTargetFrameworkToOutputPath=false `
-          -p:AppendRuntimeIdentifierToOutputPath=false
-    
-    - name: Create output directory
+          --no-restore
+
+    - name: Publish Self-Contained Portable App
       run: |
-        New-Item -ItemType Directory -Path "build_output" -Force
-        Copy-Item "src/RDAT.Copilot.App/bin/Release/win-x64/RDAT.Copilot.App.exe" "build_output/" -ErrorAction SilentlyContinue
-        Copy-Item "src/RDAT.Copilot.App/bin/Release/win-x64/*.dll" "build_output/" -ErrorAction SilentlyContinue
-    
-    - name: Compress executable
+        dotnet publish src/RDAT.Copilot.App/RDAT.Copilot.App.csproj `
+          -c ${{ env.CONFIGURATION }} `
+          -r win-x64 `
+          --self-contained true `
+          -p:WindowsPackageType=None `
+          -p:PublishReadyToRun=true `
+          -p:PublishSingleFile=false `
+          -p:Platform=x64 `
+          -p:DebugType=None `
+          -p:DebugSymbols=false `
+          --output ./publish
+
+    - name: Verify Native DLLs
+      shell: powershell
       run: |
-        Compress-Archive -Path "build_output/*" -DestinationPath "RDAT.Copilot.App.zip" -Force
-    
-    - name: Upload artifacts
+        $requiredDlls = @("onnxruntime.dll", "onnxruntime_providers_shared.dll")
+        $missing = @()
+        foreach ($dll in $requiredDlls) {
+          $found = Get-ChildItem -Path "./publish" -Filter $dll -Recurse -File
+          if ($found.Count -eq 0) {
+            $missing += $dll
+            Write-Host "WARNING: $dll not found in publish output" -ForegroundColor Yellow
+          } else {
+            Write-Host "Verified: $dll" -ForegroundColor Green
+          }
+        }
+        if ($missing.Count -gt 0) {
+          Write-Host "Missing DLLs: $($missing -join ', ')" -ForegroundColor Red
+        }
+
+    - name: Compress Portable Distribution
+      run: |
+        Compress-Archive -Path "publish/*" -DestinationPath "RDAT-Copilot-Portable-win-x64.zip" -Force
+
+    - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: rdat-copilot-windows
-        path: |
-          build_output/
-          RDAT.Copilot.App.zip
+        name: rdat-copilot-windows-portable
+        path: RDAT-Copilot-Portable-win-x64.zip
         retention-days: 30
-    
-    - name: Create Release
+
+    - name: Create GitHub Release
       if: success()
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
-        files: RDAT.Copilot.App.zip
-        tag_name: v${{ github.run_number }}
-        release_name: RDAT Copilot Release ${{ github.run_number }}
+        files: RDAT-Copilot-Portable-win-x64.zip
+        tag_name: v1.0.${{ github.run_number }}
+        release_name: RDAT Copilot v1.0.${{ github.run_number }} - Portable
         draft: false
         prerelease: false
+        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Upload to storage service
+
+    - name: Build Summary
       if: success()
       run: |
-        Write-Host "Build completed successfully!"
-        Write-Host "Artifact size: $(Get-Item 'RDAT.Copilot.App.zip' | ForEach-Object {'{0:F2} MB' -f ($_.Length / 1MB)})"
+        $zipSize = (Get-Item 'RDAT-Copilot-Portable-win-x64.zip').Length / 1MB
+        Write-Host "========================================" -ForegroundColor Cyan
+        Write-Host "BUILD SUCCESSFUL" -ForegroundColor Green
+        Write-Host "========================================" -ForegroundColor Cyan
+        Write-Host "Package: RDAT-Copilot-Portable-win-x64.zip"
+        Write-Host "Size: $([math]::Round($zipSize, 2)) MB"
+        Write-Host "========================================" -ForegroundColor Cyan

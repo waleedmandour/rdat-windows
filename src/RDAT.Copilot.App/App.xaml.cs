@@ -1,14 +1,17 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using System;
 using System.IO;
-// This alias is critical: it prevents the compiler from confusing 
+// This alias is critical: it prevents the compiler from confusing
 // System.IO.Path with Microsoft.UI.Xaml.Shapes.Path
-using Path = System.IO.Path; 
+using Path = System.IO.Path;
 
+using RDAT.Copilot.App.Bridges;
 using RDAT.Copilot.App.ViewModels;
 using RDAT.Copilot.App.Views;
+using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Services;
+using RDAT.Copilot.Infrastructure.Gemini;
 using RDAT.Copilot.Infrastructure.LanceDb;
 using RDAT.Copilot.Infrastructure.Linting;
 using RDAT.Copilot.Infrastructure.Onnx;
@@ -18,12 +21,12 @@ namespace RDAT.Copilot.App;
 public partial class App : Application
 {
     private static Window? _mainWindow;
-    
+
     /// <summary>
     /// Static access to the main window.
     /// </summary>
     public static Window MainWindow => _mainWindow!;
-    
+
     /// <summary>
     /// Centralized Service Provider for Dependency Injection.
     /// </summary>
@@ -33,7 +36,7 @@ public partial class App : Application
     {
         // InitializeComponent must be called first for XAML loading
         this.InitializeComponent();
-        
+
         this.UnhandledException += App_UnhandledException;
         ConfigureServices();
     }
@@ -46,23 +49,24 @@ public partial class App : Application
         services.AddSingleton<IAmtaLinterService, AmtaLinterService>();
         services.AddSingleton<ISemanticTmService, LanceDbTmService>();
         services.AddSingleton<ILlmInferenceService, OnnxLlmService>();
+        services.AddSingleton<IGeminiService, GeminiCloudService>();
         services.AddSingleton<GhostTextCoordinator>();
 
-        // 2. ViewModels (Frontend Logic)
-        services.AddTransient<TranslationViewModel>();
+        // 2. Editor Bridge (WebView2 <-> Monaco)
+        services.AddSingleton<IEditorBridge, EditorBridge>();
 
-        // Note: StartupService and HardwareService are removed for now 
-        // to ensure a clean first build. We will add them once the .exe runs.
+        // 3. ViewModels (Frontend Logic)
+        services.AddTransient<TranslationViewModel>();
 
         Services = services.BuildServiceProvider();
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
-{
-    _mainWindow = new MainWindow();
-    _mainWindow.Content = new ShellPage();
-    _mainWindow.Activate();
-}
+    {
+        _mainWindow = new MainWindow();
+        _mainWindow.Content = new ShellPage();
+        _mainWindow.Activate();
+    }
 
     private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
@@ -72,11 +76,11 @@ public partial class App : Application
         {
             var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RDAT", "Logs");
             if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
-            
+
             var logPath = Path.Combine(logDir, $"error-{DateTime.Now:yyyyMMdd-HHmmss}.log");
             File.WriteAllText(logPath, e.Exception.ToString() + "\n" + e.Message);
         }
-        catch 
+        catch
         {
             // If logging fails, there's nothing more we can do
         }

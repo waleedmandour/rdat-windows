@@ -7,6 +7,8 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  DOTNET_VERSION: '8.0.x'
+  CONFIGURATION: Release
 
 jobs:
   build-and-release:
@@ -19,11 +21,13 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -31,43 +35,34 @@ jobs:
       - name: Install WinUI 3 Workloads
         run: dotnet workload install maui-windows --ignore-failed-sources
 
-      - name: Ensure Windows 10/11 SDK for CsWinRT
-        shell: powershell
-        run: |
-          $sdkRoot = "${env:ProgramFiles(x86)}\Windows Kits\10\Platforms\UAP"
-          if (-not (Test-Path "$sdkRoot\10.0.19041.0\Platform.xml")) {
-            Write-Host "Installing Windows 10 SDK 19041 (UAP)..."
-            # Use the Visual Studio installer to add just the UAP SDK
-            $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-            $vsPath = & $vsWhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
-            if ($vsPath) {
-              $channel = if ($env:GITHUB_ACTIONS -eq 'true') { 'VisualStudio.17.Release' } else { '17' }
-              $installer = Join-Path $vsPath "..\..\VC\Auxiliary\Build\Microsoft.VisualStudio.Installer.exe"
-              if (Test-Path $installer) {
-                Start-Process -FilePath $installer -ArgumentList 'modify', '--installPath', $vsPath, '--add', 'Microsoft.VisualStudio.Component.Windows10SDK.19041', '--quiet', '--norestart' -Wait -ErrorAction SilentlyContinue
-              }
-            }
-            # Fallback: create minimal Platform.xml stub
-            New-Item -ItemType Directory -Path "$sdkRoot\10.0.19041.0" -Force -ErrorAction SilentlyContinue | Out-Null
-            if (!(Test-Path "$sdkRoot\10.0.19041.0\Platform.xml")) {
-              @'
-        <ApplicationPlatform xmlns="http://schemas.microsoft.com/appx/2016/foundation" Name="UAP" Version="10.0.19041.0" />
-'@ | Set-Content -Path "$sdkRoot\10.0.19041.0\Platform.xml" -Encoding UTF8
-              Write-Host "Created minimal Platform.xml stub"
-            }
-          }
-
       - name: Restore NuGet Packages
         run: dotnet restore RDAT.Copilot.sln
 
-      - name: Execute Build Script
-        shell: powershell
+      - name: Build Release
         run: |
-          .\scripts\build-release.ps1
-          $zipPath = Get-ChildItem -Path ".\RDAT-Copilot-Portable-*.zip" | Select-Object -First 1
-          if ($zipPath) {
-            echo "RELEASE_ASSET=$($zipPath.Name)" >> $env:GITHUB_ENV
-          }
+          dotnet build RDAT.Copilot.sln `
+            -c ${{ env.CONFIGURATION }} `
+            -p:Platform=x64 `
+            --no-restore
+
+      - name: Publish Self-Contained Portable App
+        run: |
+          dotnet publish src/RDAT.Copilot.App/RDAT.Copilot.App.csproj `
+            -c ${{ env.CONFIGURATION }} `
+            -r win-x64 `
+            --self-contained true `
+            -p:WindowsPackageType=None `
+            -p:PublishReadyToRun=true `
+            -p:PublishSingleFile=false `
+            -p:Platform=x64 `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            --output ./publish
+
+      - name: Compress Distribution
+        run: |
+          Compress-Archive -Path "publish/*" -DestinationPath "RDAT-Copilot-Portable-win-x64.zip" -Force
+          echo "RELEASE_ASSET=RDAT-Copilot-Portable-win-x64.zip" >> $env:GITHUB_ENV
 
       - name: Upload ZIP Release Asset
         uses: softprops/action-gh-release@v2
@@ -85,3 +80,11 @@ jobs:
           files: docs/RDAT-Copilot-Integration-Document.pdf
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Summary
+        if: success()
+        run: |
+          $zipSize = (Get-Item $env:RELEASE_ASSET).Length / 1MB
+          Write-Host "Release build complete!" -ForegroundColor Green
+          Write-Host "Package: $env:RELEASE_ASSET"
+          Write-Host "Size: $([math]::Round($zipSize, 2)) MB"

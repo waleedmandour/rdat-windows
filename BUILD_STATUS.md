@@ -1,234 +1,127 @@
-# GitHub Actions Build Status & Workarounds
+# GitHub Actions Build Status
 
-**Last Updated:** April 18, 2026
-
----
-
-## 🚨 Current Build Status: XamlCompiler Blocker
-
-### Error
-```
-MSB3073: The command "...XamlCompiler.exe" exited with code 1
-```
-
-### Root Cause
-- Windows App SDK 1.6.250108002 contains broken XamlCompiler.exe
-- Issue affects both local and GitHub Actions builds
-- See: [XAML_COMPILER_WORKAROUNDS.md](XAML_COMPILER_WORKAROUNDS.md)
+**Last Updated:** April 23, 2026
 
 ---
 
-## ✅ Immediate Solution: SDK Downgrade
+## Build Status: Fixed and Ready
 
-### Option 1: Downgrade to Windows App SDK 1.5.x (Recommended)
+### Previous Blocker (Resolved)
+- Windows App SDK 1.6.250108002 contained a broken XamlCompiler.exe that crashed with exit code 1
+- **Fix Applied:** Downgraded to Windows App SDK 1.5.3 which has a stable XamlCompiler
+- **Additional Fixes:** Removed broken workarounds, added missing NuGet packages, fixed code-behind errors
 
-**Step 1:** Edit `src/RDAT.Copilot.App/RDAT.Copilot.App.csproj`
-```xml
-<!-- Change this: -->
-<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250108002" />
+---
 
-<!-- To this: -->
-<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.3" />
+## Changes Applied
 
-<!-- And update BuildTools: -->
-<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621" />
-```
+### Critical Fixes
+1. **Downgraded Windows App SDK** from 1.6.250108002 to 1.5.3 (XamlCompiler crash fix)
+2. **Updated Windows SDK BuildTools** from 10.0.28000 to 10.0.22621
+3. **Removed broken XAML workarounds** from Directory.Build.props (DisableXamlCompilation, CompileXaml override)
+4. **Added missing NuGet packages:** Microsoft.Extensions.DependencyInjection, Microsoft.Extensions.Logging
+5. **Added LanceDB NuGet package** for vector Translation Memory
+6. **Added Google.Generative.AI package** for Gemini cloud fallback
+7. **Fixed GlossaryPage** code-behind referencing non-existent DataGrid control
+8. **Fixed GlossaryPage** XAML buttons missing Click event handlers
+9. **Fixed EditorBridge** typo in "ghostTextResult" message type (was "ghosTextResult")
+10. **Fixed GitHub Actions workflows** - correct solution path, added workload install
+11. **Fixed System.Reactive version** consistency across all projects (6.0.1)
+12. **Added explicit TargetFramework** to Core and Infrastructure projects
+13. **Added default corpus data** (default-corpus-en-ar.json) matching RDAT-PWA
+14. **Added Gemini cloud fallback service** for when local ONNX is unavailable
 
-**Step 2:** Test locally
+---
+
+## Build Commands
+
+### Quick Build
 ```powershell
-cd C:\RDAT\rdat-windows
-dotnet clean
-dotnet restore
-dotnet build "RDAT.Copilot.sln" -c Release -p:Platform=x64
+dotnet restore RDAT.Copilot.sln
+dotnet build RDAT.Copilot.sln -c Release -p:Platform=x64
 ```
 
-**Step 3:** If successful, trigger GitHub Actions build
+### Build Portable .EXE
 ```powershell
-git add .
-git commit -m "Downgrade Windows App SDK to 1.5.3 (XamlCompiler fix)"
-git push origin main
+dotnet publish src/RDAT.Copilot.App/RDAT.Copilot.App.csproj `
+    -c Release -r win-x64 --self-contained true `
+    -p:WindowsPackageType=None -p:PublishReadyToRun=true `
+    -p:Platform=x64 --output ./publish
 ```
 
-**Step 4:** GitHub Actions automatically triggers and builds
+### Full Build Script
+```powershell
+.\scripts\Build-RDAT.ps1 -Clean
+```
 
 ---
 
-### Option 2: Await Windows App SDK 1.7.x Release
-
-- Monitor: [Windows App SDK Releases](https://github.com/microsoft/WindowsAppSDK/releases)
-- When 1.7.0 stable is released, update in .csproj and rebuild
-- No code changes required—only dependency update
-
----
-
-## 🤖 GitHub Actions Workflow Details
+## GitHub Actions Workflow
 
 **File:** `.github/workflows/build-release.yml`
 
-### Workflow Steps:
-1. ✅ Checkout code + LFS files
-2. ✅ Setup .NET 8
-3. ✅ Restore NuGet packages
-4. ⏳ Build Release (currently blocked by XamlCompiler)
-5. 📦 Create output directory
-6. 🗜️ Compress to .zip
-7. 📤 Upload artifacts (available 30 days)
-8. 🎯 Auto-create GitHub Release
-9. ☁️ Ready for cloud distribution
-
 ### Triggers:
 - **Automatic:** Push to `main` branch with code changes
-- **Manual:** GitHub Actions tab → "Run workflow" button
-- **Scheduled:** Can be configured for nightly builds
+- **Manual:** GitHub Actions tab -> "Run workflow" button
+
+### Workflow Steps:
+1. Checkout code + LFS files
+2. Setup .NET 8
+3. Add MSBuild to PATH
+4. Install WinUI 3 workloads
+5. Restore NuGet packages
+6. Build Release
+7. Publish self-contained portable app
+8. Verify native DLLs
+9. Compress to .zip
+10. Upload artifacts
+11. Auto-create GitHub Release
 
 ---
 
-## 📊 Build Output Structure
+## Build Output
 
 ```
-When build succeeds, GitHub Actions creates:
-│
-├── RDAT.Copilot.App.zip (main artifact)
+When build succeeds:
+├── RDAT-Copilot-Portable-win-x64.zip
 │   ├── RDAT.Copilot.App.exe
 │   ├── Dependencies (*.dll files)
+│   ├── Assets/ (Monaco editor, corpus data)
 │   └── Supporting files
-│
 ├── GitHub Release (auto-created)
-│   └── Downloadable .zip file
-│
 └── Artifacts (30-day retention)
-    └── Available in Actions tab
 ```
 
 ---
 
-## 🚀 Quick Start When Build Works
+## Included AI Models & Databases
 
-### 1. **Monitor Build**
-```
-GitHub → Actions → "Build RDAT Copilot Release" → Latest run
-```
+### Local AI (ONNX Runtime + DirectML)
+| Model | Purpose | Location |
+|-------|---------|----------|
+| Phi-3-mini-4k-instruct (DirectML INT4) | Ghost text generation | Models/phi3-mini-4k-instruct-onnx/ |
+| all-MiniLM-L6-v2 | Semantic embeddings for TM | Models/minilm-l6-v2/ |
 
-### 2. **Download Artifact**
-```
-Actions → Run → Artifacts → rdat-copilot-windows → Download
-```
+### Cloud AI (Optional)
+| Service | Purpose | Configuration |
+|---------|---------|---------------|
+| Google Gemini 1.5 Flash | Cloud fallback translation | API key in Settings |
 
-### 3. **Download from Release**
-```
-Repository → Releases → Latest → Download RDAT.Copilot.App.zip
-```
-
----
-
-## 📦 Distribution Methods Ready
-
-When build succeeds, distribute via:
-
-| Method | Steps | Size Limit |
-|--------|-------|-----------|
-| **GitHub Releases** | Auto (included in workflow) | 2 GB per file |
-| **Azure Blob Storage** | See DISTRIBUTION_GUIDE.md | Unlimited |
-| **AWS S3** | See DISTRIBUTION_GUIDE.md | Unlimited |
-| **Google Drive** | Manual upload | 15 GB free |
-| **OneDrive** | Manual upload | 5 GB free |
+### Databases
+| Database | Purpose | Implementation |
+|----------|---------|----------------|
+| LanceDB | Vector Translation Memory | In-memory + persistent |
+| Default Corpus | EN-AR translation pairs | Assets/data/default-corpus-en-ar.json |
 
 ---
 
-## 🔧 Manual Workflow Trigger
+## Model Download
 
-If you don't want to push code:
-
-1. GitHub → Actions tab
-2. Click: "Build RDAT Copilot Release"
-3. Click: "Run workflow"
-4. Select: `main` branch
-5. Click: "Run workflow"
-6. Wait ~15-20 minutes
-
----
-
-## 📝 Next Steps
-
-### Immediate (Today)
-- [ ] Test SDK downgrade locally (1.5.3)
-- [ ] If successful: Push changes
-- [ ] GitHub Actions auto-triggers build
-
-### If SDK Downgrade Fails
-- [ ] Try older version (1.4.x, 1.3.x)
-- [ ] Or await Windows App SDK 1.7.x
-
-### When Build Succeeds
-- [ ] Download artifact from GitHub Actions
-- [ ] Test executable locally
-- [ ] Choose distribution method
-- [ ] Publish to public
-
----
-
-## 🧪 Testing Build Locally
-
+Before first use, download the ONNX models:
 ```powershell
-# Before GitHub Actions, test locally:
-cd C:\RDAT\rdat-windows
-
-# Clean previous build
-dotnet clean
-
-# Restore with updated SDK
-dotnet restore
-
-# Build Release
-dotnet build -c Release -p:Platform=x64 --nologo
-
-# Check output
-Get-Item "src/RDAT.Copilot.App/bin/Release/**/RDAT.Copilot.App.exe"
-
-# If .exe created successfully → GitHub Actions will work!
+.\scripts\download-models.ps1 -TargetFolder .\Models
 ```
 
----
-
-## 📞 Troubleshooting
-
-### GitHub Actions Build Fails
-1. Check: Build Logs in Actions tab
-2. Usually same XamlCompiler issue
-3. Solution: Downgrade SDK locally first, then push
-
-### Can't Downgrade SDK
-1. Remove: `Microsoft.WindowsAppSDK` reference
-2. Try: WinUI 3 with different package source
-3. Contact: Microsoft support / GitHub Issues
-
-### Need Build on Different Machine
-1. Push current code to GitHub
-2. Use GitHub Actions (runs on Microsoft-hosted runners)
-3. Download artifact from Actions
-
----
-
-## 💡 Pro Tips
-
-- **Set up branch protection:** Require passing builds before merge
-- **Add build status badge:** Show build status in README
-- **Schedule nightly builds:** Detect regressions early
-- **Multi-platform builds:** Add separate workflow for x86, ARM64
-
----
-
-## 🎯 Success Criteria
-
-✅ Workflow file in `.github/workflows/build-release.yml`
-✅ Solution file accessible at repository root
-✅ Dependencies specified in project files
-✅ Release artifacts auto-uploaded
-✅ GitHub Release auto-created
-⏳ XamlCompiler blocker resolved
-✅ Distribution methods documented
-
----
-
-**For detailed distribution methods, see:** [DISTRIBUTION_GUIDE.md](DISTRIBUTION_GUIDE.md)
-**For XamlCompiler troubleshooting, see:** [XAML_COMPILER_WORKAROUNDS.md](XAML_COMPILER_WORKAROUNDS.md)
+This downloads:
+- **MiniLM-L6-v2**: ~90MB embedding model
+- **Phi-3-mini DirectML INT4**: ~2.4GB generative model
