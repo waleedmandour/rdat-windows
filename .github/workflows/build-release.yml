@@ -45,11 +45,36 @@ jobs:
       run: dotnet restore RDAT.Copilot.sln
 
     - name: Build Release
+      shell: powershell
       run: |
-        dotnet build RDAT.Copilot.sln `
-          -c ${{ env.CONFIGURATION }} `
-          -p:Platform=x64 `
-          --no-restore
+        # Build with detailed verbosity and capture XamlCompiler output
+        dotnet build RDAT.Copilot.sln -c $env:CONFIGURATION -p:Platform=x64 --no-restore -v diag 2>&1 |
+          Out-File -FilePath build-log.txt -Encoding utf8
+        
+        # Always show the build result
+        $buildResult = Select-String -Path build-log.txt -Pattern "Build FAILED|Build succeeded|error MSB|error CS|XamlCompiler" | Select-Object -Last 20
+        $buildResult | ForEach-Object { Write-Host $_.Line }
+        
+        # If XamlCompiler failed, try to show its input/output
+        if ($buildResult -match "XamlCompiler") {
+          Write-Host "`n--- XamlCompiler Diagnostics ---" -ForegroundColor Yellow
+          $inputJson = "src\RDAT.Copilot.App\obj\x64\Release\input.json"
+          $outputJson = "src\RDAT.Copilot.App\obj\x64\Release\output.json"
+          if (Test-Path $inputJson) {
+            Write-Host "Input JSON exists: $(Get-Item $inputJson).Length bytes" -ForegroundColor Cyan
+            Get-Content $inputJson -TotalCount 30 | Write-Host
+          }
+          if (Test-Path $outputJson) {
+            Write-Host "Output JSON:" -ForegroundColor Cyan
+            Get-Content $outputJson | Write-Host
+          }
+        }
+        
+        # Check exit code
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
+          exit $LASTEXITCODE
+        }
 
     - name: Publish Self-Contained Portable App
       run: |
