@@ -55,7 +55,7 @@
             </ListView.Header>
 
             <ListView.ItemTemplate>
-                <DataTemplate x:DataType="local:GlossaryDisplayItem">
+                <DataTemplate>
                     <Grid Padding="0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="180"/>
