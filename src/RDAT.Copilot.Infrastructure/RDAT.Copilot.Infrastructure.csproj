@@ -15,13 +15,17 @@
   <!-- NuGet References -->
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.5.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.20.1" />
+
+    <!-- ============ ONNX Runtime + GenAI (DirectML GPU) ============ -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.6.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.21.0" />
+
     <PackageReference Include="System.Reactive" Version="6.0.1" />
 
     <!-- ============ LanceDB for Vector Translation Memory ============ -->
-    <PackageReference Include="LanceDb" Version="0.6.20" />
+    <PackageReference Include="LanceDb" Version="0.8.0" />
 
     <!-- ============ JSON for Gemini API ============ -->
     <PackageReference Include="System.Text.Json" Version="8.0.0" />

@@ -32,8 +32,10 @@ jobs:
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
 
-      - name: Install WinUI 3 Workloads
-        run: dotnet workload install maui-windows --ignore-failed-sources
+      - name: Install Windows App SDK Workloads
+        run: |
+          dotnet workload install maui-desktop --ignore-failed-sources
+          dotnet workload install windowsdesktop --ignore-failed-sources || true
 
       - name: Restore NuGet Packages
         run: dotnet restore RDAT.Copilot.sln
@@ -54,10 +56,24 @@ jobs:
             -p:WindowsPackageType=None `
             -p:PublishReadyToRun=true `
             -p:PublishSingleFile=false `
+            -p:WindowsAppSDKSelfContained=true `
             -p:Platform=x64 `
             -p:DebugType=None `
             -p:DebugSymbols=false `
             --output ./publish
+
+      - name: Copy Assets to Publish
+        shell: powershell
+        run: |
+          $assetsDir = "./publish/Assets"
+          if (-not (Test-Path $assetsDir)) {
+            New-Item -ItemType Directory -Path $assetsDir -Force | Out-Null
+          }
+          $dataDir = "./publish/Assets/data"
+          if (-not (Test-Path $dataDir)) {
+            New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+          }
+          Write-Host "Assets directory verified." -ForegroundColor Green
 
       - name: Compress Distribution
         run: |

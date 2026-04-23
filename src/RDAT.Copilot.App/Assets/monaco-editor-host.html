@@ -5,20 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RDAT Monaco Editor</title>
     <style>
-        /* ================================================================
-           RDAT Copilot - Monaco Editor Host Page
-           ================================================================
-           This HTML page is loaded into the WinUI 3 WebView2 control.
-           It hosts the Monaco Editor and provides the RTL-aware ghost
-           text styling that cannot be injected via C# alone.
-
-           Key RTL considerations:
-           - The editor container uses CSS direction:rtl when active
-           - Ghost text uses unicode-bidi for proper Arabic rendering
-           - Cursor position is adjusted to prevent "jumping" artifacts
-           - Line numbers reposition to the right side in RTL mode
-           ================================================================ */
-
         * {
             margin: 0;
             padding: 0;
@@ -32,7 +18,7 @@
             font-family: 'Segoe UI', 'Arabic Typesetting', Tahoma, sans-serif;
         }
 
-        /* Ghost text overlay - "Google-like" inline suggestions */
+        /* Ghost text overlay */
         .rdat-ghost-inline {
             color: rgba(140, 140, 140, 0.55);
             font-style: italic;
@@ -51,7 +37,6 @@
             unicode-bidi: bidi-override;
             text-align: right;
             font-family: 'Segoe UI', 'Arabic Typesetting', 'Simplified Arabic', sans-serif;
-            /* BiDi cursor anchor: thin blue left border in RTL */
             border-left: 2px solid rgba(100, 149, 237, 0.45);
             padding-left: 3px;
         }
@@ -60,12 +45,11 @@
             direction: ltr;
             text-align: left;
             font-family: 'Cascadia Code', 'Consolas', monospace;
-            /* LTR cursor anchor: thin blue right border */
             border-right: 2px solid rgba(100, 149, 237, 0.45);
             padding-right: 3px;
         }
 
-        /* RTL editor mode - adjusts Monaco's layout direction */
+        /* RTL editor mode */
         .monaco-editor.rdat-rtl-mode {
             direction: rtl;
         }
@@ -80,7 +64,6 @@
             text-align: left;
         }
 
-        /* Scrollbar positioning fix for RTL */
         .monaco-editor.rdat-rtl-mode .scroll-decoration {
             right: 14px;
             left: auto;
@@ -136,116 +119,130 @@
     </div>
     <div id="editor-container"></div>
 
-    <!-- Monaco Editor AMD Loader -->
-    <script src="ms-appx:///Assets/monaco-editor/min/vs/loader.js"></script>
-
+    <!-- Monaco Editor: Try local bundle first, fall back to CDN -->
     <script>
-        // ================================================================
-        // RDAT Copilot - Monaco Editor Bootstrap
-        // ================================================================
-        require.config({
-            paths: {
-                'vs': 'ms-appx:///Assets/monaco-editor/min/vs'
-            }
-        });
+        // Determine the base path for Monaco Editor files
+        // For packaged apps: ms-appx:///Assets/monaco-editor/min/vs
+        // For unpackaged apps: try local path, then CDN
+        var monacoBasePath = null;
+        var isLocalAvailable = false;
 
-        // Arabic language definition for Monaco (basic tokenization)
-        require(['vs/editor/editor.main'], function () {
-            // Register Arabic language support
-            monaco.languages.register({ id: 'arabic-translation' });
+        // Try to detect if local Monaco files are available
+        function tryLoadLocal(onSuccess, onFail) {
+            var testScript = document.createElement('script');
+            testScript.src = 'ms-appx:///Assets/monaco-editor/min/vs/loader.js';
+            testScript.onload = function() {
+                monacoBasePath = 'ms-appx:///Assets/monaco-editor/min/vs';
+                isLocalAvailable = true;
+                onSuccess();
+            };
+            testScript.onerror = function() {
+                onFail();
+            };
+            // Set a timeout in case the script neither loads nor errors
+            setTimeout(function() {
+                if (!isLocalAvailable) onFail();
+            }, 3000);
+            document.head.appendChild(testScript);
+        }
 
-            monaco.languages.setMonarchTokensProvider('arabic-translation', {
-                tokenizer: {
-                    root: [
-                        // Arabic text: any sequence of Arabic Unicode chars
-                        [/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+/,
-                            'string'],
-                        // English words
-                        [/[a-zA-Z]+/, 'keyword'],
-                        // Numbers
-                        [/[0-9]+/, 'number'],
-                        // Punctuation
-                        [/[.,;:!?،؟]/, 'delimiter'],
-                    ]
+        function loadFromCDN() {
+            monacoBasePath = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.50.0/min/vs';
+            var script = document.createElement('script');
+            script.src = monacoBasePath + '/loader.js';
+            script.onload = function() { initEditor(); };
+            script.onerror = function() {
+                document.getElementById('loading-text').textContent =
+                    'Failed to load editor. Check internet connection.';
+            };
+            document.head.appendChild(script);
+        }
+
+        function initEditor() {
+            require.config({
+                paths: { 'vs': monacoBasePath }
+            });
+
+            require(['vs/editor/editor.main'], function () {
+                // Register Arabic language support
+                monaco.languages.register({ id: 'arabic-translation' });
+
+                monaco.languages.setMonarchTokensProvider('arabic-translation', {
+                    tokenizer: {
+                        root: [
+                            [/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+/, 'string'],
+                            [/[a-zA-Z]+/, 'keyword'],
+                            [/[0-9]+/, 'number'],
+                            [/[.,;:!?،؟]/, 'delimiter'],
+                        ]
+                    }
+                });
+
+                // Theme: RDAT Dark (optimized for translation work)
+                monaco.editor.defineTheme('rdat-dark', {
+                    base: 'vs-dark',
+                    inherit: true,
+                    rules: [
+                        { token: 'keyword', foreground: '6495ED', fontStyle: 'bold' },
+                        { token: 'string', foreground: 'CE9178' },
+                        { token: 'number', foreground: 'B5CEA8' },
+                        { token: 'delimiter', foreground: '808080' },
+                    ],
+                    colors: {
+                        'editor.background': '#1E1E1E',
+                        'editor.foreground': '#D4D4D4',
+                        'editorCursor.foreground': '#6495ED',
+                        'editor.selectionBackground': '#264F78',
+                        'editor.lineHighlightBackground': '#2A2D2E',
+                        'editorLineNumber.foreground': '#858585',
+                        'editorLineNumber.activeForeground': '#C6C6C6',
+                        'editor.inactiveSelectionBackground': '#3A3D41',
+                        'editorIndentGuide.background': '#404040',
+                        'editorBracketMatch.background': '#0064001A',
+                        'editorBracketMatch.border': '#888888',
+                    }
+                });
+
+                // Create editor instance
+                var editor = monaco.editor.create(document.getElementById('editor-container'), {
+                    value: '',
+                    language: 'arabic-translation',
+                    theme: 'rdat-dark',
+                    fontSize: 14,
+                    fontFamily: "'Segoe UI', 'Arabic Typesetting', 'Cascadia Code', monospace",
+                    lineNumbers: 'on',
+                    wordWrap: 'on',
+                    wordWrapColumn: 80,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    renderLineHighlight: 'all',
+                    smoothScrolling: true,
+                    cursorBlinking: 'smooth',
+                    cursorSmoothCaretAnimation: 'on',
+                    bracketPairColorization: { enabled: true },
+                    guides: { bracketPairs: true },
+                    padding: { top: 8, bottom: 8 },
+                    automaticLayout: true,
+                    direction: 'ltr',
+                });
+
+                // Hide loading overlay
+                document.getElementById('loading-overlay').classList.add('hidden');
+
+                // Initialize ghost text features
+                if (window.initGhostTextFeatures) {
+                    window.initGhostTextFeatures(editor);
+                }
+
+                // Notify C# bridge that Monaco is ready
+                if (window.rdatMonacoReady) {
+                    window.rdatMonacoReady(editor);
                 }
             });
+        }
 
-            // Theme: RDAT Dark (optimized for translation work)
-            monaco.editor.defineTheme('rdat-dark', {
-                base: 'vs-dark',
-                inherit: true,
-                rules: [
-                    { token: 'keyword', foreground: '6495ED', fontStyle: 'bold' },
-                    { token: 'string', foreground: 'CE9178' },
-                    { token: 'number', foreground: 'B5CEA8' },
-                    { token: 'delimiter', foreground: '808080' },
-                ],
-                colors: {
-                    'editor.background': '#1E1E1E',
-                    'editor.foreground': '#D4D4D4',
-                    'editorCursor.foreground': '#6495ED',
-                    'editor.selectionBackground': '#264F78',
-                    'editor.lineHighlightBackground': '#2A2D2E',
-                    'editorLineNumber.foreground': '#858585',
-                    'editorLineNumber.activeForeground': '#C6C6C6',
-                    'editor.inactiveSelectionBackground': '#3A3D41',
-                    'editorIndentGuide.background': '#404040',
-                    'editorBracketMatch.background': '#0064001A',
-                    'editorBracketMatch.border': '#888888',
-                }
-            });
-
-            // Create editor instance
-            var editor = monaco.editor.create(document.getElementById('editor-container'), {
-                value: '',
-                language: 'arabic-translation',
-                theme: 'rdat-dark',
-                fontSize: 14,
-                fontFamily: "'Segoe UI', 'Arabic Typesetting', 'Cascadia Code', monospace",
-                lineNumbers: 'on',
-                wordWrap: 'on',
-                wordWrapColumn: 80,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                renderLineHighlight: 'all',
-                smoothScrolling: true,
-                cursorBlinking: 'smooth',
-                cursorSmoothCaretAnimation: 'on',
-                bracketPairColorization: { enabled: true },
-                guides: { bracketPairs: true },
-                padding: { top: 8, bottom: 8 },
-                automaticLayout: true,
-                // RTL-specific defaults
-                direction: 'ltr',
-            });
-
-            // Hide loading overlay
-            document.getElementById('loading-overlay').classList.add('hidden');
-
-            // Notify C# bridge that Monaco is ready
-            if (window.rdatMonacoReady) {
-                window.rdatMonacoReady(editor);
-            }
-
-            // Register keyboard shortcuts for ghost text
-            editor.addAction({
-                id: 'rdat-accept-ghost',
-                label: 'Accept Ghost Text',
-                keybindings: [monaco.KeyMod.Tab],
-                run: function () {
-                    // Handled by the bridge script
-                }
-            });
-
-            editor.addAction({
-                id: 'rdat-reject-ghost',
-                label: 'Reject Ghost Text',
-                keybindings: [monaco.KeyCode.Escape],
-                run: function () {
-                    // Handled by the bridge script
-                }
-            });
-        });
+        // Start loading: try local first, then CDN fallback
+        tryLoadLocal(initEditor, loadFromCDN);
     </script>
 </body>
 </html>

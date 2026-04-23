@@ -15,13 +15,16 @@ Write-Host "1. Building & Publishing RDAT Copilot (Release)..." -ForegroundColor
 
 # Publish command utilizing strict win-x64 targeting and ReadyToRun optimization.
 # -p:WindowsPackageType=None turns it into an unpackaged standard Win32 portable .exe.
+# -p:WindowsAppSDKSelfContained=true bundles the Windows App SDK runtime.
 # PublishTrimmed is disabled because WinUI 3 uses reflection heavily.
 dotnet publish ".\src\RDAT.Copilot.App\RDAT.Copilot.App.csproj" `
     -c "Release" `
     -r win-x64 `
     --self-contained true `
     -p:PublishReadyToRun=true `
+    -p:PublishSingleFile=false `
     -p:WindowsPackageType=None `
+    -p:WindowsAppSDKSelfContained=true `
     -p:Platform=x64 `
     -p:DebugType=None `
     -p:DebugSymbols=false `
@@ -54,7 +57,20 @@ foreach ($dll in $NativeDlls) {
     }
 }
 
-Write-Host "3. Packaging into $ZipName..." -ForegroundColor Cyan
+Write-Host "3. Ensuring Assets directory exists..." -ForegroundColor Cyan
+$assetsDir = Join-Path $PublishDir "Assets"
+if (-not (Test-Path $assetsDir)) {
+    New-Item -ItemType Directory -Path $assetsDir -Force | Out-Null
+    Write-Host "  -> Created Assets directory." -ForegroundColor Green
+}
+
+$dataDir = Join-Path $assetsDir "data"
+if (-not (Test-Path $dataDir)) {
+    New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+    Write-Host "  -> Created Assets/data directory." -ForegroundColor Green
+}
+
+Write-Host "4. Packaging into $ZipName..." -ForegroundColor Cyan
 if (Test-Path $ZipName) {
     Remove-Item $ZipName -Force
 }

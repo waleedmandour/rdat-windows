@@ -39,10 +39,9 @@ public sealed partial class GlossaryPage : Page
     {
         if (GlossaryListView.SelectedItem is GlossaryDisplayItem entry)
         {
-            entry.Direction = entry.Direction == "En-Ar" ? "Ar-En" : "En-Ar";
-            // Refresh the item display
+            var newDirection = entry.Direction == "En-Ar" ? "Ar-En" : "En-Ar";
             var idx = GlossaryEntries.IndexOf(entry);
-            GlossaryEntries[idx] = entry with { Direction = entry.Direction };
+            GlossaryEntries[idx] = entry with { Direction = newDirection };
         }
     }
 

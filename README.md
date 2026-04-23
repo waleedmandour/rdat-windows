@@ -14,7 +14,7 @@ This is the Windows desktop version of the [RDAT-PWA](https://github.com/waleedm
 ## Key Features
 
 *   **Ghost Text Autocomplete:** Real-time, low-latency suggestions powered by **ONNX Runtime GenAI** and **DirectML** GPU acceleration. Press Tab to accept, Escape to reject.
-*   **Gemini Cloud Fallback:** Optional Google Gemini 1.5 Flash integration for when local GPU is unavailable or insufficient. 100% offline by default.
+*   **Gemini Cloud Fallback:** Optional Google Gemini 3.0 Flash integration for when local GPU is unavailable or insufficient. 100% offline by default.
 *   **Semantic TM Search:** Local vector database (**LanceDB**) that retrieves contextually relevant translation pairs using ONNX sentence embeddings (MiniLM-L6-v2).
 *   **AMTA Glossary Linter:** Automatic enforcement of professional terminology compliance using Aho-Corasick multi-pattern matching.
 *   **Native .docx Integration:** Seamlessly process Word documents using DocumentFormat.OpenXml without requiring Microsoft Word installed.
@@ -32,7 +32,7 @@ This is the Windows desktop version of the [RDAT-PWA](https://github.com/waleedm
 ### Cloud AI (Optional - Requires API Key)
 | Service | Purpose |
 |---------|---------|
-| Google Gemini 1.5 Flash | Cloud fallback translation |
+| Google Gemini 3.0 Flash | Cloud fallback translation |
 
 ### Databases
 | Database | Purpose |

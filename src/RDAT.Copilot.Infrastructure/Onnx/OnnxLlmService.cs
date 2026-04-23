@@ -37,12 +37,18 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
 
     public string InferenceMode => _isLoaded ? "DirectML GPU" : "Not Loaded";
 
+    /// <summary>
+    /// Gets the model path that was last used to load the model, or null if not loaded.
+    /// </summary>
+    public string? LoadedModelPath { get; private set; }
+
     public Task LoadModelAsync(string modelPath, CancellationToken ct = default)
     {
         return Task.Run(async () =>
         {
             await _modelScope.LoadAsync(modelPath, ct);
             _isLoaded = true;
+            LoadedModelPath = modelPath;
             _logger.LogInformation("ONNX LLM model loaded from {ModelPath}", modelPath);
         }, ct);
     }

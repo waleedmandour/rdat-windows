@@ -7,6 +7,7 @@ using System.IO;
 using Path = System.IO.Path;
 
 using RDAT.Copilot.App.Bridges;
+using RDAT.Copilot.App.Hosting;
 using RDAT.Copilot.App.ViewModels;
 using RDAT.Copilot.App.Views;
 using RDAT.Copilot.Core.Interfaces;
@@ -50,12 +51,16 @@ public partial class App : Application
         services.AddSingleton<ISemanticTmService, LanceDbTmService>();
         services.AddSingleton<ILlmInferenceService, OnnxLlmService>();
         services.AddSingleton<IGeminiService, GeminiCloudService>();
+        services.AddSingleton<IHardwareService, HardwareService>();
         services.AddSingleton<GhostTextCoordinator>();
 
-        // 2. Editor Bridge (WebView2 <-> Monaco)
+        // 2. Startup Service (model loading, hardware detection)
+        services.AddSingleton<StartupService>();
+
+        // 3. Editor Bridge (WebView2 <-> Monaco)
         services.AddSingleton<IEditorBridge, EditorBridge>();
 
-        // 3. ViewModels (Frontend Logic)
+        // 4. ViewModels (Frontend Logic)
         services.AddTransient<TranslationViewModel>();
 
         Services = services.BuildServiceProvider();
@@ -66,6 +71,39 @@ public partial class App : Application
         _mainWindow = new MainWindow();
         _mainWindow.Content = new ShellPage();
         _mainWindow.Activate();
+
+        // Fire-and-forget startup initialization (model loading, hardware detection)
+        _ = InitializeAsync();
+    }
+
+    /// <summary>
+    /// Initializes the TM database and optionally loads the ONNX model.
+    /// Runs in the background after the window is shown for a fast UX.
+    /// </summary>
+    private async Task InitializeAsync()
+    {
+        try
+        {
+            var startupService = Services.GetService<StartupService>();
+            if (startupService != null)
+            {
+                await startupService.InitializeAsync();
+            }
+
+            // Open the TM database with default corpus
+            var tmService = Services.GetService<ISemanticTmService>();
+            if (tmService != null)
+            {
+                string appDataPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "RDAT", "TranslationMemory");
+                await tmService.OpenAsync(appDataPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Startup initialization failed: {ex.Message}");
+        }
     }
 
     private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)

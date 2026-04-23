@@ -92,6 +92,7 @@ dotnet publish $MainProject `
     -p:PublishReadyToRun=true `
     -p:PublishSingleFile=false `
     -p:WindowsPackageType=None `
+    -p:WindowsAppSDKSelfContained=true `
     -p:Platform=x64 `
     -p:DebugType=None `
     -p:DebugSymbols=false `

@@ -4,16 +4,29 @@
 *.user
 *.suo
 
-# Native Dependencies
-*.dll
-*.exe
-*.pdb
+# Native Dependencies (in bin/obj output only)
+**/bin/**/*.dll
+**/bin/**/*.exe
+**/bin/**/*.pdb
+**/obj/**/*.dll
+**/obj/**/*.exe
+**/obj/**/*.pdb
 
 # AI MODELS (DO NOT REMOVE)
 /src/RDAT.Copilot.App/Assets/Models/
 /scripts/temp_models/
 *.onnx
+*.onnx.data
 *.bin
 
 # LanceDB Data
 *.lance/
+
+# Published output
+/publish/
+*.zip
+
+# IDE
+.vs/
+.vscode/
+.idea/

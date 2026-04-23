@@ -24,7 +24,8 @@ public sealed class GeminiCloudService : IGeminiService
     private readonly HttpClient _httpClient;
     private string? _apiKey;
 
-    private const string GeminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    private const string GeminiModel = "gemini-3.0-flash";
+    private const string GeminiEndpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash:generateContent";
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_apiKey);
 
@@ -33,9 +34,14 @@ public sealed class GeminiCloudService : IGeminiService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _httpClient = new HttpClient
         {
-            Timeout = TimeSpan.FromSeconds(30)
+            Timeout = TimeSpan.FromSeconds(60)
         };
     }
+
+    /// <summary>
+    /// Gets the current Gemini model identifier being used.
+    /// </summary>
+    public string ModelId => GeminiModel;
 
     public void Configure(string apiKey)
     {
