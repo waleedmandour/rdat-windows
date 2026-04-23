@@ -3,7 +3,7 @@
 Builds, publishes, and packages the RDAT Copilot into an offline-ready ZIP.
 .DESCRIPTION
 This script performs a self-contained release publish tailored for Windows 10/11 x64,
-incorporates native required binaries for DirectML + ONNX and LanceDB, and zips the payload.
+incorporates native required binaries for DirectML + ONNX, and zips the payload.
 #>
 
 $ErrorActionPreference = "Stop"

@@ -31,7 +31,6 @@ $OutputZip = Join-Path $ProjectRoot "$OutputName.zip"
 
 # Native DLLs that must be copied to the publish root
 $RequiredNativeDlls = @(
-    "lancedb.dll",
     "onnxruntime.dll",
     "DirectML.dll",
     "onnxruntime_providers_shared.dll"

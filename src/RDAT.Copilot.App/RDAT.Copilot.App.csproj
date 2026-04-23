@@ -27,7 +27,7 @@
   <ItemGroup>
     <!-- ============ WinUI 3 SDK (1.5.3 - stable, no XamlCompiler crash) ============ -->
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240802000" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1" />
 
     <!-- ============ C#/WinRT Projection (required for WinUI 3) ============ -->
     <PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.2.0" />
@@ -52,7 +52,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
 
     <!-- ============ JSON Processing ============ -->
-    <PackageReference Include="System.Text.Json" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 
   <ItemGroup>

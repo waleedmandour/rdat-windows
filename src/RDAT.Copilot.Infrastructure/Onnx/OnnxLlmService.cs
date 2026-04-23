@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntimeGenAI;
 using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;
-using RDAT.Copilot.Core.Services;
 
 namespace RDAT.Copilot.Infrastructure.Onnx;
 

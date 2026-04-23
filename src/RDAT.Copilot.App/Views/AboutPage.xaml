@@ -20,7 +20,7 @@
             <!-- Version info -->
             <StackPanel Spacing="4">
                 <TextBlock Text="Version" FontWeight="SemiBold" Opacity="0.8"/>
-                <TextBlock Text="1.0.0" Opacity="0.6"/>
+                <TextBlock Text="1.1.0" Opacity="0.6"/>
             </StackPanel>
 
             <!-- Description -->

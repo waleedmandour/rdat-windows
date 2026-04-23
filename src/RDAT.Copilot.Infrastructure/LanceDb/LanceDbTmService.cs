@@ -14,9 +14,14 @@ using RDAT.Copilot.Core.Models;
 namespace RDAT.Copilot.Infrastructure.LanceDb;
 
 /// <summary>
-/// Semantic Translation Memory service using LanceDB for vector storage
-/// and ONNX Runtime for sentence embedding generation.
+/// Semantic Translation Memory service using ONNX Runtime for sentence
+/// embedding generation and in-memory vector storage for semantic search.
 /// Implements the ISemanticTmService interface from Core.
+///
+/// Note: Despite the namespace and class name, this service uses in-memory
+/// storage with ONNX semantic search rather than LanceDB native interop,
+/// as the LanceDB NuGet package had compatibility issues with .NET 8 WinUI 3.
+/// The architecture supports future migration to LanceDB when stable.
 ///
 /// On initialization, loads the default EN-AR corpus from Assets/data/
 /// if no existing TM database is found.

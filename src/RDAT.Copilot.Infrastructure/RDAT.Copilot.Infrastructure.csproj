@@ -24,11 +24,8 @@
 
     <PackageReference Include="System.Reactive" Version="6.0.1" />
 
-    <!-- ============ LanceDB for Vector Translation Memory ============ -->
-    <PackageReference Include="LanceDb" Version="0.8.0" />
-
     <!-- ============ JSON for Gemini API ============ -->
-    <PackageReference Include="System.Text.Json" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 
   <!-- Project Reference -->

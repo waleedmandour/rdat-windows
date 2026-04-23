@@ -12,7 +12,7 @@ namespace RDAT.Copilot.Infrastructure.Gemini;
 
 /// <summary>
 /// Google Gemini API cloud fallback for translation when local ONNX
-/// inference is unavailable. Uses the Gemini 1.5 Flash model for
+/// inference is unavailable. Uses the Gemini 3.0 Flash model for
 /// low-latency ghost text predictions and full translations.
 ///
 /// Privacy note: Only used when the user explicitly configures an API key.
@@ -156,14 +156,29 @@ public sealed class GeminiCloudService : IGeminiService
         var responseJson = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(responseJson);
 
-        var text = doc.RootElement
-            .GetProperty("candidates")[0]
-            .GetProperty("content")
-            .GetProperty("parts")[0]
-            .GetProperty("text")
-            .GetString() ?? "";
+        // Defensive parsing: the Gemini API response structure may vary
+        // depending on model version and safety filtering
+        var root = doc.RootElement;
 
-        return text.Trim();
+        if (root.TryGetProperty("candidates", out var candidates) &&
+            candidates.GetArrayLength() > 0)
+        {
+            var firstCandidate = candidates[0];
+            if (firstCandidate.TryGetProperty("content", out var content) &&
+                content.TryGetProperty("parts", out var parts) &&
+                parts.GetArrayLength() > 0)
+            {
+                var firstPart = parts[0];
+                if (firstPart.TryGetProperty("text", out var textElement))
+                {
+                    return textElement.GetString()?.Trim() ?? "";
+                }
+            }
+        }
+
+        _logger.LogWarning("Unexpected Gemini API response structure: {Response}",
+            responseJson.Length > 500 ? responseJson[..500] + "..." : responseJson);
+        return "";
     }
 
     private static string BuildGhostTextPrompt(string sourceText, string sourceLang, string targetLang)

@@ -34,8 +34,10 @@ jobs:
 
       - name: Install Windows App SDK Workloads
         run: |
-          dotnet workload install maui-desktop --ignore-failed-sources
-          dotnet workload install windowsdesktop --ignore-failed-sources || true
+          # The Windows App SDK workload is pre-installed on windows-latest runners.
+          # No additional workloads are needed for WinUI 3 desktop apps.
+          Write-Host "Verifying .NET SDK workloads..."
+          dotnet workload list
 
       - name: Restore NuGet Packages
         run: dotnet restore RDAT.Copilot.sln
@@ -99,6 +101,7 @@ jobs:
 
       - name: Release Summary
         if: success()
+        shell: powershell
         run: |
           $zipSize = (Get-Item $env:RELEASE_ASSET).Length / 1MB
           Write-Host "Release build complete!" -ForegroundColor Green

@@ -38,10 +38,10 @@ jobs:
 
     - name: Install Windows App SDK Workloads
       run: |
-        # Install the desktop workload needed for WinUI 3 / Windows App SDK
-        dotnet workload install maui-desktop --ignore-failed-sources
-        # Also install windowsdesktop workload for WPF/WinForms support
-        dotnet workload install windowsdesktop --ignore-failed-sources || true
+        # The Windows App SDK workload is pre-installed on windows-latest runners.
+        # No additional workloads are needed for WinUI 3 desktop apps.
+        Write-Host "Verifying .NET SDK workloads..."
+        dotnet workload list
 
     - name: Restore NuGet packages
       run: dotnet restore RDAT.Copilot.sln
@@ -130,6 +130,7 @@ jobs:
 
     - name: Build Summary
       if: success()
+      shell: powershell
       run: |
         $zipSize = (Get-Item 'RDAT-Copilot-Portable-win-x64.zip').Length / 1MB
         Write-Host "========================================" -ForegroundColor Cyan

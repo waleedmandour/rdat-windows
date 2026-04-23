@@ -3,6 +3,7 @@
 // Location: src/RDAT.Copilot.Core/Services/GhostTextCoordinator.cs
 // ========================================================================
 
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using RDAT.Copilot.Core.Interfaces;
 using RDAT.Copilot.Core.Models;
