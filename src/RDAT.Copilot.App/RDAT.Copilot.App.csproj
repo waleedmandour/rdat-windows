@@ -25,8 +25,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- ============ WinUI 3 SDK (1.5.3 - stable, no XamlCompiler crash) ============ -->
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240802000" />
+    <!-- ============ WinUI 3 SDK (1.8 - stable, XamlCompiler fixes) ============ -->
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260416003" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1" />
 
     <!-- ============ C#/WinRT Projection (required for WinUI 3) ============ -->
