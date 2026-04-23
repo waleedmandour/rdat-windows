@@ -27,13 +27,13 @@
   <ItemGroup>
     <!-- ============ WinUI 3 SDK (1.8 - stable, XamlCompiler fixes) ============ -->
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260416003" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4654" />
 
     <!-- ============ C#/WinRT Projection (required for WinUI 3) ============ -->
     <PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.2.0" />
 
     <!-- ============ WebView2 for Monaco Editor ============ -->
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3179.45" />
 
     <!-- ============ MVVM Toolkit ============ -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
