@@ -18,10 +18,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
 
     <!-- ============ ONNX Runtime + GenAI (DirectML GPU) ============ -->
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.4" />
     <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.13.1" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.21.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.24.4" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.24.4" />
 
     <PackageReference Include="System.Reactive" Version="6.0.1" />
 
