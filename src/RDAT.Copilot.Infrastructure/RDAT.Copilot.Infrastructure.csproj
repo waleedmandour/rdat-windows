@@ -9,7 +9,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <NoWarn>CA1848;CA1873;CA1869;CA1305;CA1001;CA1822</NoWarn>
   </PropertyGroup>
 
   <!-- NuGet References -->
@@ -18,7 +19,7 @@
 
     <!-- ============ ONNX Runtime + GenAI (DirectML GPU) ============ -->
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.6.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI" Version="0.13.1" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.21.0" />
 

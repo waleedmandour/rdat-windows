@@ -14,7 +14,9 @@ namespace RDAT.Copilot.Infrastructure.Onnx;
 
 /// <summary>
 /// Local ONNX GenAI inference service with DirectML GPU acceleration.
-/// Implements greedy-decode for low-latency ghost text predictions.
+/// Uses the latest Microsoft.ML.OnnxRuntimeGenAI C# API (0.13.x).
+/// Generator.AppendTokenSequences replaces SetInputSequences;
+/// ComputeLogits is no longer needed — GenerateNextToken handles it.
 /// </summary>
 public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
 {
@@ -66,26 +68,31 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
         {
             var tokenizer = _modelScope.AcquireTokenizer();
             var model = _modelScope.AcquireModel();
+            var tokenizerStream = _modelScope.AcquireTokenizerStream();
 
             var prompt = BuildTranslationPrompt(sourceText, sourceLang, targetLang);
-            using var tokens = tokenizer.Encode(prompt);
+            using var sequences = tokenizer.Encode(prompt);
+
             using var generatorParams = new GeneratorParams(model);
             generatorParams.SetSearchOption("max_length", DefaultMaxStreamingTokens);
-            generatorParams.SetInputSequences(tokens);
 
             using var generator = new Generator(model, generatorParams);
+            generator.AppendTokenSequences(sequences);
 
             while (!generator.IsDone())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await Task.Yield();
 
-                generator.ComputeLogits();
                 generator.GenerateNextToken();
 
-                int token = generator.GetSequence(0)[^1];
-                string decoded = tokenizer.Decode(new[] { token });
-                yield return decoded;
+                // Decode the newly generated token using the streaming tokenizer
+                var nextTokens = generator.GetNextTokens();
+                if (nextTokens.Length > 0)
+                {
+                    string decoded = tokenizerStream.Decode(nextTokens[0]);
+                    yield return decoded;
+                }
             }
         }
         finally
@@ -113,18 +120,17 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
 
             string prompt = BuildTranslationPrompt(sourceText, sourceLang, targetLang);
 
-            using var tokens = tokenizer.Encode(prompt);
+            using var sequences = tokenizer.Encode(prompt);
             using var generatorParams = new GeneratorParams(model);
 
             generatorParams.SetSearchOption("max_length", DefaultMaxNewTokens);
             generatorParams.SetSearchOption("top_p", 1.0);
             generatorParams.SetSearchOption("top_k", 1);
             generatorParams.SetSearchOption("temperature", 0.0);
-            generatorParams.SetInputSequences(tokens);
 
             using var generator = new Generator(model, generatorParams);
+            generator.AppendTokenSequences(sequences);
 
-            var generatedTokens = new List<int>(DefaultMaxNewTokens);
             int generatedCount = 0;
 
             while (!generator.IsDone() && generatedCount < DefaultMaxNewTokens)
@@ -132,15 +138,14 @@ public sealed class OnnxLlmService : ILlmInferenceService, IAsyncDisposable
                 if (cancellationToken.IsCancellationRequested)
                     return new GhostTextResult { Text = "", Confidence = 0 };
 
-                generator.ComputeLogits();
                 generator.GenerateNextToken();
-
-                int token = generator.GetSequence(0)[^1];
-                generatedTokens.Add(token);
                 generatedCount++;
             }
 
-            string prediction = tokenizer.Decode(generatedTokens.ToArray());
+            // Decode all generated tokens at once
+            var outputSequence = generator.GetSequence(0);
+            string prediction = tokenizer.Decode(outputSequence);
+
             sw.Stop();
             _lastLatency = sw.Elapsed;
 
