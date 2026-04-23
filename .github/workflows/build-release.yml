@@ -49,7 +49,7 @@ jobs:
         dotnet build RDAT.Copilot.sln `
           -c ${{ env.CONFIGURATION }} `
           -p:Platform=x64 `
-          -p:EnableXamlResourcesCompilation=false `
+          -p:XamlDisablePrecompiled=true `
           --no-restore
 
     - name: Publish Self-Contained Portable App
